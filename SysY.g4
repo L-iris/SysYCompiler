@@ -4,146 +4,146 @@ grammar SysY;
 //https://github.com/antlr/grammars-v4/blob/master/c/C.g4
 
 program
-    : CompUnit
+    : compUnit
     ;
 
-CompUnit
-    : (FuncDef|Decl)+
+compUnit
+    : (funcDef|decl)+
     ;
 
-Decl
-    : ConstDecl
-    | VarDecl
+decl
+    : constDecl
+    | varDecl
     ;
 
-ConstDecl
-    : CONST BType ConstDef (COMMA ConstDef)* SEMICOLON
+constDecl
+    : CONST bType constDef (COMMA constDef)* SEMICOLON
     ;
 
-BType
+bType
     :INT | FLOAT
     ;
 
-ConstDef
-    :Identifier (LB ConstExpr RB)* ASSIGN ConstInitVal
+constDef
+    :Identifier (LB constExpr RB)* ASSIGN constInitVal
     ;
 
-ConstInitVal
-    :ConstExpr
-    |(LC (ConstInitVal (COMMA ConstInitVal)*)? RC)
+constInitVal
+    :constExpr
+    |(LC (constInitVal (COMMA constInitVal)*)? RC)
     ;
 
-VarDecl
-    :BType VarDef (COMMA VarDef)* SEMICOLON
+varDecl
+    :bType varDef (COMMA varDef)* SEMICOLON
     ;
 
-VarDef
-    :Identifier (LB ConstExpr RB)* (ASSIGN InitVal)?
+varDef
+    :Identifier (LB constExpr RB)* (ASSIGN initVal)?
     ;
 
-InitVal
-    :Expr
-    |(LC (InitVal (COMMA InitVal)*)? RC)
+initVal
+    :expr
+    |(LC (initVal (COMMA initVal)*)? RC)
     ;
 
-FuncDef
-    :FuncType Identifier LP (FuncFParams)? RP Block
+funcDef
+    :funcType Identifier LP (funcFParams)? RP block
     ;
 
-FuncType
+funcType
     :INT|VOID|FLOAT
     ;
 
-FuncFParams
-    :FuncFParam (COMMA FuncFParam)*
+funcFParams
+    :funcFParam (COMMA funcFParam)*
     ;
 
-FuncFParam
-    :BType Identifier (LB RB (LB Expr RB)*)?
+funcFParam
+    :bType Identifier (LB RB (LB expr RB)*)?
     ;
 
-Block
-    :LC BlockItem* RC
+block
+    :LC blockItem* RC
     ;
 
-BlockItem
-    :Decl|Stmt
+blockItem
+    :decl|stmt
     ;
 
-Stmt
-    :(LVal ASSIGN Expr SEMICOLON)
-    |((Expr)? SEMICOLON)
-    |Block
-    |(IF LP Cond RP Stmt (ELSE Stmt)?)
-    |(WHILE LP Cond RP Stmt)
+stmt
+    :(lVal ASSIGN expr SEMICOLON)
+    |((expr)? SEMICOLON)
+    |block
+    |(IF LP cond RP stmt (ELSE stmt)?)
+    |(WHILE LP cond RP stmt)
     |(BREAK SEMICOLON)
     |(CONTINUE SEMICOLON)
-    |(RETURN Expr? SEMICOLON)
+    |(RETURN expr? SEMICOLON)
     ;
 
-Expr
-    :AddExpr
+expr
+    :addExpr
     ;
 
-Cond
-    :LOrExpr
+cond
+    :lOrExpr
     ;
 
-LVal
-    :Identifier (LB Expr RB)*
+lVal
+    :Identifier (LB expr RB)*
     ;
 
-PrimaryExpr
-    :(LP Expr RP)
-    |LVal
-    |Number
+primaryExpr
+    :(LP expr RP)
+    |lVal
+    |number
     ;
 
-Number
+number
     :IntConst
     |FloatConst
     ;
 
-UnaryExpr
-    :PrimaryExpr
-    |(Identifier LP (FuncRParams)? RP)
-    |(UnaryOp UnaryExpr)
+unaryExpr
+    :primaryExpr
+    |(Identifier LP (funcRParams)? RP)
+    |(unaryOp unaryExpr)
     ;
 
-UnaryOp
+unaryOp
     :ADD|MINUS|NOT
     ;
 
-FuncRParams
-    :Expr (COMMA Expr)*
+funcRParams
+    :expr (COMMA expr)*
     ;
 
-MulExpr
-    :UnaryExpr ((MUL|DIV|MOD) UnaryExpr)*
+mulExpr
+    :unaryExpr ((MUL|DIV|MOD) unaryExpr)*
     ;
 
-AddExpr
-    :MulExpr ((ADD|MINUS) MulExpr)*
+addExpr
+    :mulExpr ((ADD|MINUS) mulExpr)*
     ;
 
-RelExpr
-    :AddExpr ((LT|GT|LE|GE) AddExpr)*
+relExpr
+    :addExpr ((LT|GT|LE|GE) addExpr)*
     ;
 
-EqExpr
-    :RelExpr ((EQ|NE) RelExpr)*
+eqExpr
+    :relExpr ((EQ|NE) relExpr)*
     ;
 
-LAndExpr
-    :EqExpr (AND LAndExpr)*
+lAndExpr
+    :eqExpr (AND lAndExpr)*
     ;
 
-LOrExpr
-    :LAndExpr (OR LAndExpr)*
+lOrExpr
+    :lAndExpr (OR lAndExpr)*
     ;
 
-ConstExpr
-    :AddExpr
+constExpr
+    :addExpr
     ;
 
 CONST
@@ -187,8 +187,8 @@ RETURN
     ;
 
 Identifier
-    : [_a-zA-Z]
-    |[_a-zA-Z][_a-zA-Z0-9]+
+    :   [_a-zA-Z]
+    |   [_a-zA-Z][_a-zA-Z0-9]+
     ;
 
 IntConst
