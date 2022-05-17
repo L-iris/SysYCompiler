@@ -1,395 +1,354 @@
 grammar SysY;
 
-// 1. 表达式部分做了消除左递归
-// 2. 函数调用参数加了字符串（运行时库中有 `void putf(<格式串>, int, ...)` ）
-// 3. 单个数字 0 会被解析成八进制常数，这与文法定义一致
+//some of the programming takes the ANTLR4 official document of C11 for reference
+//https://github.com/antlr/grammars-v4/blob/master/c/C.g4
 
 program
-   : compUnit
-   ;
+    : CompUnit
+    ;
 
-compUnit
-   : (funcDef | decl)+
-   ;
+CompUnit
+    : (FuncDef|Decl)+
+    ;
 
-decl
-   : constDecl
-   | varDecl
-   ;
+Decl
+    : ConstDecl
+    | VarDecl
+    ;
 
-constDecl
-   : CONST_KW bType constDef (COMMA constDef)* SEMICOLON
-   ;
+ConstDecl
+    : CONST BType ConstDef (COMMA ConstDef)* SEMICOLON
+    ;
 
-bType
-   : INT_KW
-   ;
+BType
+    :INT | FLOAT
+    ;
 
-constDef
-   : IDENT (L_BRACKT constExp R_BRACKT)* ASSIGN constInitVal
-   ;
+ConstDef
+    :Identifier (LB ConstExpr RB)* ASSIGN ConstInitVal
+    ;
 
-constInitVal
-   : constExp
-   | (L_BRACE (constInitVal (COMMA constInitVal)*)? R_BRACE)
-   ;
+ConstInitVal
+    :ConstExpr
+    |(LC (ConstInitVal (COMMA ConstInitVal)*)? RC)
+    ;
 
-varDecl
-   : bType varDef (COMMA varDef)* SEMICOLON
-   ;
+VarDecl
+    :BType VarDef (COMMA VarDef)* SEMICOLON
+    ;
 
-varDef
-   : IDENT (L_BRACKT constExp R_BRACKT)* (ASSIGN initVal)?
-   ;
+VarDef
+    :Identifier (LB ConstExpr RB)* (ASSIGN InitVal)?
+    ;
 
-initVal
-   : exp
-   | (L_BRACE (initVal (COMMA initVal)*)? R_BRACE)
-   ;
+InitVal
+    :Expr
+    |(LC (InitVal (COMMA InitVal)*)? RC)
+    ;
 
-funcDef
-   : funcType IDENT L_PAREN funcFParams? R_PAREN block
-   ;
+FuncDef
+    :FuncType Identifier LP (FuncFParams)? RP Block
+    ;
 
-funcType
-   : VOID_KW
-   | INT_KW
-   ;
+FuncType
+    :INT|VOID|FLOAT
+    ;
 
-funcFParams
-   : funcFParam (COMMA funcFParam)*
-   ;
+FuncFParams
+    :FuncFParam (COMMA FuncFParam)*
+    ;
 
-funcFParam
-   : bType IDENT (L_BRACKT R_BRACKT (L_BRACKT exp R_BRACKT)*)?
-   ;
+FuncFParam
+    :BType Identifier (LB RB (LB Expr RB)*)?
+    ;
 
-block
-   : L_BRACE blockItem* R_BRACE
-   ;
+Block
+    :LC BlockItem* RC
+    ;
 
-blockItem
-   : constDecl
-   | varDecl
-   | stmt
-   ;
+BlockItem
+    :Decl|Stmt
+    ;
 
-stmt
-   : assignStmt
-   | expStmt
-   | block
-   | conditionStmt
-   | whileStmt
-   | breakStmt
-   | continueStmt
-   | returnStmt
-   ;
+Stmt
+    :(LVal ASSIGN Expr SEMICOLON)
+    |((Expr)? SEMICOLON)
+    |Block
+    |(IF LP Cond RP Stmt (ELSE Stmt)?)
+    |(WHILE LP Cond RP Stmt)
+    |(BREAK SEMICOLON)
+    |(CONTINUE SEMICOLON)
+    |(RETURN Expr? SEMICOLON)
+    ;
 
-assignStmt
-   : lVal ASSIGN exp SEMICOLON
-   ;
+Expr
+    :AddExpr
+    ;
 
-expStmt
-   : exp? SEMICOLON
-   ;
+Cond
+    :LOrExpr
+    ;
 
-conditionStmt
-   : IF_KW L_PAREN cond R_PAREN stmt (ELSE_KW stmt)?
-   ;
+LVal
+    :Identifier (LB Expr RB)*
+    ;
 
-whileStmt
-   : WHILE_KW L_PAREN cond R_PAREN stmt
-   ;
+PrimaryExpr
+    :(LP Expr RP)
+    |LVal
+    |Number
+    ;
 
-breakStmt
-   : BREAK_KW SEMICOLON
-   ;
+Number
+    :IntConst
+    |FloatConst
+    ;
 
-continueStmt
-   : CONTINUE_KW SEMICOLON
-   ;
+UnaryExpr
+    :PrimaryExpr
+    |(Identifier LP (FuncRParams)? RP)
+    |(UnaryOp UnaryExpr)
+    ;
 
-returnStmt
-   : RETURN_KW (exp)? SEMICOLON
-   ;
+UnaryOp
+    :ADD|MINUS|NOT
+    ;
 
-exp
-   : addExp
-   ;
+FuncRParams
+    :Expr (COMMA Expr)*
+    ;
 
-cond
-   : lOrExp
-   ;
+MulExpr
+    :UnaryExpr ((MUL|DIV|MOD) UnaryExpr)*
+    ;
 
-lVal
-   : IDENT (L_BRACKT exp R_BRACKT)*
-   ;
+AddExpr
+    :MulExpr ((ADD|MINUS) MulExpr)*
+    ;
 
-primaryExp
-   : (L_PAREN exp R_PAREN)
-   | lVal
-   | number
-   ;
+RelExpr
+    :AddExpr ((LT|GT|LE|GE) AddExpr)*
+    ;
 
-number
-   : intConst
-   ;
+EqExpr
+    :RelExpr ((EQ|NE) RelExpr)*
+    ;
 
-intConst
-   : DECIMAL_CONST
-   | OCTAL_CONST
-   | HEXADECIMAL_CONST
-   ;
+LAndExpr
+    :EqExpr (AND LAndExpr)*
+    ;
 
-unaryExp
-   : primaryExp
-   | callee
-   | (unaryOp unaryExp)
-   ;
+LOrExpr
+    :LAndExpr (OR LAndExpr)*
+    ;
 
-callee
-   : IDENT L_PAREN funcRParams? R_PAREN
-   ;
+ConstExpr
+    :AddExpr
+    ;
 
-unaryOp
-   : PLUS
-   | MINUS
-   | NOT
-   ;
+CONST
+    : 'const'
+    ;
 
-// 不同于语言定义，支持了运行时库的 void putf(<格式串>, int, ...) 的字符串
-funcRParams
-   : param (COMMA param)*
-   ;
+INT
+    : 'int'
+    ;
 
-param
-   : exp
-   | STRING
-   ;
+FLOAT
+    : 'float'
+    ;
 
-mulExp
-   : unaryExp (mulOp unaryExp)*
-   ; // eliminate left-recursive
+VOID
+    : 'void'
+    ;
 
-mulOp
-   : MUL
-   | DIV
-   | MOD
-   ;
+IF
+    : 'if'
+    ;
 
-addExp
-   : mulExp (addOp mulExp)*
-   ; // eliminate left-recursive
+ELSE
+    : 'else'
+    ;
 
-addOp
-   : PLUS
-   | MINUS
-   ;
+WHILE
+    : 'while'
+    ;
 
-relExp
-   : addExp (relOp addExp)*
-   ; // eliminate left-recursive
+BREAK
+    : 'break'
+    ;
 
-relOp
-   : LT
-   | GT
-   | LE
-   | GE
-   ;
+CONTINUE
+    : 'continue'
+    ;
 
-eqExp
-   : relExp (eqOp relExp)*
-   ; // eliminate left-recursive
+RETURN
+    : 'return'
+    ;
 
-eqOp
-   : EQ
-   | NEQ
-   ;
+Identifier
+    : [_a-zA-Z]
+    |[_a-zA-Z][_a-zA-Z0-9]+
+    ;
 
-lAndExp
-   : eqExp (AND eqExp)*
-   ; // eliminate left-recursive
-
-lOrExp
-   : lAndExp (OR lAndExp)*
-   ; // eliminate left-recursive
-
-constExp
-   : addExp
-   ;
-
-CONST_KW
-   : 'const'
-   ;
-
-INT_KW
-   : 'int'
-   ;
-
-VOID_KW
-   : 'void'
-   ;
-
-IF_KW
-   : 'if'
-   ;
-
-ELSE_KW
-   : 'else'
-   ;
-
-WHILE_KW
-   : 'while'
-   ;
-
-BREAK_KW
-   : 'break'
-   ;
-
-CONTINUE_KW
-   : 'continue'
-   ;
-
-RETURN_KW
-   : 'return'
-   ;
-
-IDENT
-   : [_a-zA-Z]
-   | [_a-zA-Z] [_a-zA-Z0-9]+
-   ;
+IntConst
+    :DECIMAL_CONST
+    |OCTAL_CONST
+    |HEXADECIMAL_CONST
+    ;
 
 DECIMAL_CONST
-   : [1-9]
-   | [1-9] [0-9]+
-   ;
+    : [1-9]
+    |[1-9][0-9]+
+    ;
 
 OCTAL_CONST
-   : '0'
-   | ('0' [0-7]+)
-   ;
+    : '0'
+    |('0'[0-7]+)
+    ;
 
 HEXADECIMAL_CONST
-   : ('0x' | '0X') [a-fA-F0-9]+
-   ;
+    : ('0x'|'0X') [a-fA-F0-9]+
+    ;
+
+FloatConst
+    :FractionalConst ExponentPart? FloatSuffix
+    |DigitSequence ExponentPart FloatSuffix
+    ;
+/* this fractional const may like 01.04 for example, so start with digitsequence */
+fragment FractionalConst
+    :DigitSequence? '.' DigitSequence
+    |DigitSequence '.'
+    ;
+
+fragment ExponentPart
+    :[eE] Sign? DigitSequence
+    ;
+
+fragment Sign
+    :[+-]
+    ;
+
+DigitSequence
+    :[0-9]+
+    ;
+
+FloatSuffix
+    :[fF]
+    ;
 
 STRING
-   : DOUBLE_QUOTE (ESC | REGULAR_CHAR)* DOUBLE_QUOTE
-   ;
-
-fragment REGULAR_CHAR
-   : ~ ["\\]
-   ;
+    : DOUBLE_QUOTATION (ESC|.)*? DOUBLE_QUOTATION
+    ;
 
 fragment ESC
-   : '\\' ["\\]
-   ;
+    : '\\"' | '\\\\'
+    ;
 
-PLUS
-   : '+'
-   ;
+DOUBLE_QUOTATION
+    : '"'
+    ;
+
+ADD
+    :'+'
+    ;
 
 MINUS
-   : '-'
-   ;
-
-NOT
-   : '!'
-   ;
+    :'-'
+    ;
 
 MUL
-   : '*'
-   ;
+    :'*'
+    ;
 
 DIV
-   : '/'
-   ;
+    :'/'
+    ;
 
 MOD
-   : '%'
-   ;
+    :'%'
+    ;
+
+NOT
+    :'!'
+    ;
 
 ASSIGN
-   : '='
-   ;
-
-EQ
-   : '=='
-   ;
-
-NEQ
-   : '!='
-   ;
+    :'='
+    ;
 
 LT
-   : '<'
-   ;
+    :'<'
+    ;
 
 GT
-   : '>'
-   ;
+    :'>'
+    ;
 
 LE
-   : '<='
-   ;
+    :'<='
+    ;
 
 GE
-   : '>='
-   ;
+    :'>='
+    ;
+
+EQ
+    :'=='
+    ;
+
+NE
+    :'!='
+    ;
 
 AND
-   : '&&'
-   ;
+    :'&&'
+    ;
 
 OR
-   : '||'
-   ;
+    :'||'
+    ;
 
-L_PAREN
-   : '('
-   ;
+LP
+    :'('
+    ;
 
-R_PAREN
-   : ')'
-   ;
+RP
+    :')'
+    ;
 
-L_BRACE
-   : '{'
-   ;
+LB
+    :'['
+    ;
 
-R_BRACE
-   : '}'
-   ;
+RB
+    :']'
+    ;
 
-L_BRACKT
-   : '['
-   ;
+LC
+    :'{'
+    ;
 
-R_BRACKT
-   : ']'
-   ;
+RC
+    :'}'
+    ;
 
 COMMA
-   : ','
-   ;
+    :','
+    ;
 
 SEMICOLON
-   : ';'
-   ;
-
-DOUBLE_QUOTE
-   : '"'
-   ;
+    :';'
+    ;
 
 WS
-   : [ \r\n\t]+ -> skip
-   ;
+    :[ \r\t\n]+ ->skip
+    ;
 
-LINE_COMMENT
-   : '//' ~ [\r\n]* -> skip
-   ;
+LineComment
+    :'//' ~ [\r\n]* ->skip
+    ;
 
-MULTILINE_COMMENT
-   : '/*' .*? '*/' -> skip
-   ;
-
+BlockComment
+    :'/*' .*? '/*' ->skip
+    ;
