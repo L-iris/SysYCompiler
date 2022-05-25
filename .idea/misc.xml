@@ -9,14 +9,15 @@
           <option name="outputDir" value="D:\IdeaProjects\SysYCompiler\src" />
           <option name="libDir" value="" />
           <option name="encoding" value="" />
-          <option name="pkg" value="frontend" />
+          <option name="pkg" value="util.frontend" />
           <option name="language" value="" />
+          <option name="generateListener" value="false" />
           <option name="generateVisitor" value="true" />
         </PerGrammarGenerationSettings>
       </list>
     </option>
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_15" default="true" project-jdk-name="15" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_15" default="true" project-jdk-name="17" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
 </project>
