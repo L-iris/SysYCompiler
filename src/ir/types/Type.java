@@ -10,7 +10,7 @@ public class Type {
         ArrayTyID,          ///< Arrays
     }
 
-    private final TypeID typeID;
+    protected final TypeID typeID;
 
     public Type(TypeID typeID) {
         this.typeID = typeID;

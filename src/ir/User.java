@@ -12,15 +12,16 @@ import java.util.List;
  */
 public class User extends Value{
 
-    private int numUserOperands;
+    protected List<Value> userOperands;
+    protected int numUserOperands;
 
-    public User(Type type, List<Use> useList, int numUserOperands) {
-        super(type, useList);
+    public User(Type type, String name, List<Use> useList, int numUserOperands) {
+        super(type, useList, name);
         this.numUserOperands = numUserOperands;
     }
 
-    public User(Type type, int numUserOperands) {
-        super(type);
+    public User(Type type, String name, int numUserOperands) {
+        super(type, name);
         this.numUserOperands = numUserOperands;
     }
 

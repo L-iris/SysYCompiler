@@ -11,12 +11,20 @@ import java.util.List;
  */
 public class Value {
 
-    private Type type;
-    private List<Use> useList;
+    protected Type type;
+    protected List<Use> useList;
+    protected String name;
 
-    public Value(Type type, List<Use> useList) {
+    public Value(Type type, List<Use> useList, String name) {
         this.type = type;
         this.useList = useList;
+        this.name = name;
+    }
+
+    public Value(Type type, String name) {
+        this.type = type;
+        this.useList = new ArrayList<Use>();
+        this.name = name;
     }
 
     public Value(Type type) {
