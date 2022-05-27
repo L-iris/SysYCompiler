@@ -1,5 +1,5 @@
-// Generated from D:/IdeaProjects/SysYCompiler\SysY.g4 by ANTLR 4.9.2
-package frontend;
+// Generated from D:/IdeaProjects/SysYCompiler\SysY.g4 by ANTLR 4.10.1
+package util.frontend;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
 /**
@@ -113,53 +113,11 @@ public interface SysYVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitStmt(SysYParser.StmtContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SysYParser#assignStmt}.
+	 * Visit a parse tree produced by {@link SysYParser#expr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitAssignStmt(SysYParser.AssignStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#expStmt}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitExpStmt(SysYParser.ExpStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#conditionStmt}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitConditionStmt(SysYParser.ConditionStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#whileStmt}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitWhileStmt(SysYParser.WhileStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#breakStmt}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitBreakStmt(SysYParser.BreakStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#continueStmt}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitContinueStmt(SysYParser.ContinueStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#returnStmt}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitReturnStmt(SysYParser.ReturnStmtContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#exp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitExp(SysYParser.ExpContext ctx);
+	T visitExpr(SysYParser.ExprContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SysYParser#cond}.
 	 * @param ctx the parse tree
@@ -173,11 +131,11 @@ public interface SysYVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitLVal(SysYParser.LValContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SysYParser#primaryExp}.
+	 * Visit a parse tree produced by {@link SysYParser#primaryExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitPrimaryExp(SysYParser.PrimaryExpContext ctx);
+	T visitPrimaryExpr(SysYParser.PrimaryExprContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SysYParser#number}.
 	 * @param ctx the parse tree
@@ -185,23 +143,11 @@ public interface SysYVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitNumber(SysYParser.NumberContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SysYParser#intConst}.
+	 * Visit a parse tree produced by {@link SysYParser#unaryExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitIntConst(SysYParser.IntConstContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#unaryExp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitUnaryExp(SysYParser.UnaryExpContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#callee}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitCallee(SysYParser.CalleeContext ctx);
+	T visitUnaryExpr(SysYParser.UnaryExprContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SysYParser#unaryOp}.
 	 * @param ctx the parse tree
@@ -215,75 +161,45 @@ public interface SysYVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitFuncRParams(SysYParser.FuncRParamsContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SysYParser#param}.
+	 * Visit a parse tree produced by {@link SysYParser#mulExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitParam(SysYParser.ParamContext ctx);
+	T visitMulExpr(SysYParser.MulExprContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SysYParser#mulExp}.
+	 * Visit a parse tree produced by {@link SysYParser#addExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitMulExp(SysYParser.MulExpContext ctx);
+	T visitAddExpr(SysYParser.AddExprContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SysYParser#mulOp}.
+	 * Visit a parse tree produced by {@link SysYParser#relExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitMulOp(SysYParser.MulOpContext ctx);
+	T visitRelExpr(SysYParser.RelExprContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SysYParser#addExp}.
+	 * Visit a parse tree produced by {@link SysYParser#eqExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitAddExp(SysYParser.AddExpContext ctx);
+	T visitEqExpr(SysYParser.EqExprContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SysYParser#addOp}.
+	 * Visit a parse tree produced by {@link SysYParser#lAndExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitAddOp(SysYParser.AddOpContext ctx);
+	T visitLAndExpr(SysYParser.LAndExprContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SysYParser#relExp}.
+	 * Visit a parse tree produced by {@link SysYParser#lOrExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitRelExp(SysYParser.RelExpContext ctx);
+	T visitLOrExpr(SysYParser.LOrExprContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link SysYParser#relOp}.
+	 * Visit a parse tree produced by {@link SysYParser#constExpr}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitRelOp(SysYParser.RelOpContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#eqExp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitEqExp(SysYParser.EqExpContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#eqOp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitEqOp(SysYParser.EqOpContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#lAndExp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitLAndExp(SysYParser.LAndExpContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#lOrExp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitLOrExp(SysYParser.LOrExpContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link SysYParser#constExp}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitConstExp(SysYParser.ConstExpContext ctx);
+	T visitConstExpr(SysYParser.ConstExprContext ctx);
 }
