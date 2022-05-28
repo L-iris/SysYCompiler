@@ -1,19 +1,31 @@
 package frontend;
 
+import ir.Arg;
+import ir.Function;
+import ir.types.ArrayType;
+import ir.types.FunctionType;
+import ir.types.Type;
+import util.SymbolTableStack;
 import util.frontend.SysYBaseVisitor;
 import util.frontend.SysYParser;
 
+import java.util.Collections;
+
 public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
+
+    public SymbolTableStack symbolTableStack;
+
+    public SysYVisitorImpl() {
+        this.symbolTableStack = new SymbolTableStack();
+    }
+
     /**
      * program
      *     : compUnit
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Void visitProgram(SysYParser.ProgramContext ctx) {
-
         return super.visitProgram(ctx);
     }
 
@@ -21,11 +33,15 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * compUnit
      *     : (funcDef|decl)+
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Void visitCompUnit(SysYParser.CompUnitContext ctx) {
+        symbolTableStack.enterScope();
+        symbolTableStack.addValue(new Function(Type.functionType(Type.i32()), "getint"));
+        symbolTableStack.addValue(new Function(Type.functionType(Type.i32()), "getch"));
+        symbolTableStack.addValue(new Function(
+                Type.functionType(Type.f32()),"getfloat"
+        ));
         return super.visitCompUnit(ctx);
     }
 
@@ -34,8 +50,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      *     : constDecl
      *     | varDecl
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Void visitDecl(SysYParser.DeclContext ctx) {

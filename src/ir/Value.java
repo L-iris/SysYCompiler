@@ -40,4 +40,7 @@ public class Value {
         return useList;
     }
 
+    public String getName() {
+        return name;
+    }
 }

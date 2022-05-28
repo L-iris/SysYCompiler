@@ -1,5 +1,6 @@
 package ir.types;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class FunctionType extends Type{

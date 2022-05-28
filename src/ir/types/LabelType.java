@@ -2,8 +2,8 @@ package ir.types;
 
 public class LabelType extends Type{
 
-    protected static final LabelType labelType = new LabelType();
-    public LabelType() {
+    public static final LabelType labelType = new LabelType();
+    private LabelType() {
         super(TypeID.LabelTyID);
     }
 }

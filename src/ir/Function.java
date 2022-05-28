@@ -1,14 +1,27 @@
 package ir;
 
 import ir.types.FunctionType;
-import ir.types.Type;
-import util.ir.Ilist;
-import util.ir.Inode;
+import util.ir.IList;
+import util.ir.IListNode;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class Function extends Constant implements Inode<Function,Module>, Iterable<BasicBlock> {
+public class Function extends Constant implements IListNode<Function,Module>, Iterable<BasicBlock> {
+
+    class FunctionIterator implements Iterator<BasicBlock> {
+        private int cursor = 0;
+        @Override
+        public boolean hasNext() {
+            return cursor < Function.this.basicBlockIlist.getNumNode();
+        }
+
+        @Override
+        public BasicBlock next() {
+            return Function.this.basicBlockIlist.get(cursor++).getVal();
+        }
+    }
 
     private Function prev;
     private Function next;
@@ -17,25 +30,37 @@ public class Function extends Constant implements Inode<Function,Module>, Iterab
     private List<Arg> argList;
 
     private boolean isBuiltin;
-    Ilist<BasicBlock, Function> basicBlockIlist;
+    IList<BasicBlock, Function> basicBlockIlist;
 
-    public Function(FunctionType functionType, List<Arg> argList) {
-        super(functionType);
+    public Function(FunctionType functionType, String name, List<Arg> argList, boolean isBuiltin, Module parent, Function insertBefore) {
+        super(functionType, name);
         this.argList = argList;
+        this.parent = parent;
+        this.isBuiltin = isBuiltin;
+        if(insertBefore == null) {
+
+        } else {
+
+        }
     }
+    public Function(FunctionType functionType, String name) {
+        super(functionType, name);
+        this.argList = new ArrayList<>();
+    }
+
 
     @Override
     public Iterator<BasicBlock> iterator() {
-        return null;
+        return new FunctionIterator();
     }
 
     @Override
-    public Inode<Function, Module> getNext() {
+    public IListNode<Function, Module> getNext() {
         return next;
     }
 
     @Override
-    public Inode<Function, Module> getPrev() {
+    public IListNode<Function, Module> getPrev() {
         return prev;
     }
 
@@ -49,8 +74,22 @@ public class Function extends Constant implements Inode<Function,Module>, Iterab
         return parent;
     }
 
+    @Override
+    public boolean setNext(IListNode<Function, Module> node) {
+        return false;
+    }
+
+    @Override
+    public boolean setPrev(IListNode<Function, Module> node) {
+        return false;
+    }
+
     public FunctionType getFunctionType() {
         assert this.type instanceof FunctionType;
         return (FunctionType) this.type;
+    }
+
+    public int getNumBasicBlock() {
+        return this.basicBlockIlist.getNumNode();
     }
 }

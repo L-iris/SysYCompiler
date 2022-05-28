@@ -20,13 +20,39 @@ public class User extends Value{
         this.numUserOperands = numUserOperands;
     }
 
+    public User(Type type, String name, int numUserOperands, Value[] userOperands) {
+        super(type, name);
+        assert numUserOperands == userOperands.length;
+        this.numUserOperands = numUserOperands;
+        this.userOperands = List.of(userOperands);
+    }
+
+    public User(Type type, String name, int numUserOperands, List<Value> userOperands) {
+        super(type, name);
+        assert numUserOperands == userOperands.size();
+        this.numUserOperands = numUserOperands;
+        this.userOperands = userOperands;
+    }
+
     public User(Type type, String name, int numUserOperands) {
         super(type, name);
         this.numUserOperands = numUserOperands;
     }
 
+    public User(Type type, String name) {
+        super(type, name);
+    }
+
     public User(Type type) {
         super(type);
         this.numUserOperands = 0;
+    }
+
+    public int getNumUserOperands() {
+        return numUserOperands;
+    }
+
+    public Value getOperand(int i) {
+        return userOperands.get(i);
     }
 }

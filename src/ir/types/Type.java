@@ -1,5 +1,8 @@
 package ir.types;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Type {
 
     public enum TypeID {
@@ -8,6 +11,8 @@ public class Type {
         FunctionTyID,       ///< Functions
         LabelTyID,
         ArrayTyID,          ///< Arrays
+        VoidTyID,
+        BooleanTyID,
     }
 
     protected final TypeID typeID;
@@ -24,8 +29,8 @@ public class Type {
         return IntegerType.i32;
     }
 
-    public static IntegerType i1() {
-        return IntegerType.i1;
+    public static BooleanType i1() {
+        return BooleanType.i1;
     }
 
     public static FloatType f32(){
@@ -34,5 +39,21 @@ public class Type {
 
     public static LabelType labelType() {
         return LabelType.labelType;
+    }
+
+    public static ArrayType arrayType(Type containedType, int numElements) {
+        return new ArrayType(containedType, numElements);
+    }
+
+    public static ArrayType arrayType(Type containedType) {
+        return new ArrayType(containedType, 0);
+    }
+
+    public static FunctionType functionType(Type retType, Type... paramTypes) {
+        return new FunctionType(retType, List.of(paramTypes));
+    }
+
+    public static FunctionType functionType(Type retType) {
+        return new FunctionType(retType, new ArrayList<>(0));
     }
 }

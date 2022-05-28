@@ -1,10 +1,9 @@
 package ir;
 
 import ir.types.Type;
-import util.ir.Inode;
+import util.ir.IListNode;
 
-import java.awt.*;
-import java.util.List;
+import java.util.Iterator;
 
 /**
  * This represents a single basic block in LLVM. A basic block is simply a
@@ -21,7 +20,8 @@ import java.util.List;
  * modifying a program. However, the verifier will ensure that basic blocks are
  * "well formed".
  */
-public class BasicBlock extends Value implements Inode<BasicBlock,Function> {
+public class BasicBlock extends Value implements IListNode<BasicBlock,Function>, Iterable<Instruction> {
+
     private BasicBlock next;
     private BasicBlock prev;
     private Function parent;
@@ -34,16 +34,21 @@ public class BasicBlock extends Value implements Inode<BasicBlock,Function> {
 
     public BasicBlock(Function parent) {
         super(Type.labelType());
-
+        this.parent = parent;
     }
 
     @Override
-    public Inode<BasicBlock, Function> getNext() {
+    public Iterator<Instruction> iterator() {
+        return null;
+    }
+
+    @Override
+    public IListNode<BasicBlock, Function> getNext() {
         return next;
     }
 
     @Override
-    public Inode<BasicBlock, Function> getPrev() {
+    public IListNode<BasicBlock, Function> getPrev() {
         return prev;
     }
 
@@ -55,5 +60,15 @@ public class BasicBlock extends Value implements Inode<BasicBlock,Function> {
     @Override
     public Function getParent() {
         return parent;
+    }
+
+    @Override
+    public boolean setNext(IListNode<BasicBlock, Function> node) {
+        return false;
+    }
+
+    @Override
+    public boolean setPrev(IListNode<BasicBlock, Function> node) {
+        return false;
     }
 }

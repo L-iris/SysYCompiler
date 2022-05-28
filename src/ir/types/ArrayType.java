@@ -6,7 +6,7 @@ public class ArrayType extends Type{
     // Number of elements in the array.
     private int numElements;
 
-    public ArrayType(TypeID typeID, Type containedType, int numElements) {
+    protected ArrayType(Type containedType, int numElements) {
         super(TypeID.ArrayTyID);
         ContainedType = containedType;
         this.numElements = numElements;
