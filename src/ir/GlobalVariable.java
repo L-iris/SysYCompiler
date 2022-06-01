@@ -24,7 +24,6 @@ public class GlobalVariable extends Constant implements IListNode<GlobalVariable
             parent.globalVariables.insertAtEnd(this);
     }
 
-    public static GlobalVariable create()
 
     public static GlobalVariable create() {
         return new GlobalVariable(null, null, 0, new ArrayList<>(), new ArrayList<>(), false, null);

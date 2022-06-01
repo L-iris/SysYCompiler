@@ -121,4 +121,10 @@ public class Instruction extends User implements IListNode<Instruction, BasicBlo
         this.prev = node;
         return false;
     }
+
+    @Override
+    public boolean setParent(BasicBlock parent) {
+        this.parent = parent;
+        return false;
+    }
 }
