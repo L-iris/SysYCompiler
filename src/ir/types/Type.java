@@ -13,6 +13,7 @@ public class Type {
         ArrayTyID,          ///< Arrays
         VoidTyID,
         BooleanTyID,
+        PointerType,
     }
 
     protected final TypeID typeID;
@@ -21,8 +22,12 @@ public class Type {
         this.typeID = typeID;
     }
 
-    public TypeID getType() {
+    public TypeID getTypeID() {
         return typeID;
+    }
+
+    public static VoidType voidType() {
+        return VoidType.voidType;
     }
 
     public static IntegerType i32() {

@@ -1,6 +1,7 @@
 package ir;
 
 import ir.types.Type;
+import util.ir.IList;
 import util.ir.IListNode;
 
 import java.util.Iterator;
@@ -25,6 +26,8 @@ public class BasicBlock extends Value implements IListNode<BasicBlock,Function>,
     private BasicBlock next;
     private BasicBlock prev;
     private Function parent;
+
+    public IList<Instruction, BasicBlock> instructionIList;
 
 
 
@@ -69,6 +72,12 @@ public class BasicBlock extends Value implements IListNode<BasicBlock,Function>,
 
     @Override
     public boolean setPrev(IListNode<BasicBlock, Function> node) {
+        return false;
+    }
+
+    @Override
+    public boolean setParent(Function parent) {
+        this.parent = parent;
         return false;
     }
 }

@@ -11,6 +11,10 @@ import java.util.List;
  */
 public class Constant extends User{
 
+    public Constant(Type type, String name, int numUserOperands, List<Value> userOperands, List<Use> useList) {
+        super(type, name, numUserOperands, userOperands, useList);
+    }
+
     public Constant(Type type, String name, int numUserOperands, List<Value> userOperands) {
         super(type, name, numUserOperands, userOperands);
     }

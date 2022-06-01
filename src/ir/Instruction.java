@@ -1,13 +1,14 @@
 package ir;
 
 import ir.types.Type;
+import util.ir.IList;
 import util.ir.IListNode;
 
 import java.util.List;
 
 public class Instruction extends User implements IListNode<Instruction, BasicBlock> {
 
-    enum InstType {
+    public enum InstType {
         RET,
         BR,
 
@@ -58,11 +59,23 @@ public class Instruction extends User implements IListNode<Instruction, BasicBlo
         GEP,
     }
 
-    private Instruction next;
-    private Instruction prev;
+    private IListNode<Instruction, BasicBlock> next;
+    private IListNode<Instruction, BasicBlock> prev;
     private BasicBlock parent;
 
     private InstType instType;
+
+    public static Instruction create(BasicBlock parent, Instruction insertBefore, Type resultType, String resultName, InstType instType, int numUserOperands, Value... userOperands){
+        Instruction instruction = new Instruction(resultType, resultName, instType, numUserOperands, userOperands);
+        parent.instructionIList.insertBefore(instruction, insertBefore);
+        return instruction;
+    }
+
+    public static Instruction create(BasicBlock parent, Type resultType, String resultName, InstType instType, int numUserOperands, Value... userOperands){
+        Instruction instruction = new Instruction(resultType, resultName, instType, numUserOperands, userOperands);
+        parent.instructionIList.insertAtEnd(instruction);
+        return instruction;
+    }
 
     public Instruction(Type resultType, String resultName, InstType instType, int numUserOperands, Value[] userOperands) {
         super(resultType, resultName, numUserOperands, List.of(userOperands));
@@ -99,11 +112,13 @@ public class Instruction extends User implements IListNode<Instruction, BasicBlo
 
     @Override
     public boolean setNext(IListNode<Instruction, BasicBlock> node) {
+        this.next = node;
         return false;
     }
 
     @Override
     public boolean setPrev(IListNode<Instruction, BasicBlock> node) {
+        this.prev = node;
         return false;
     }
 }

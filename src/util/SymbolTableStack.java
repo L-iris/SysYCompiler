@@ -40,4 +40,8 @@ public class SymbolTableStack {
     public boolean addValue(Value value) {
         return currentSymbolTable().addValue(value);
     }
+
+    public boolean isGlobal() {
+        return this.symbolTableList.size() == 1;
+    }
 }

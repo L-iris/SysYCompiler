@@ -1,4 +1,5 @@
 import frontend.SysYVisitorImpl;
+import ir.Module;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -23,7 +24,7 @@ public class Compiler {
         SysYParser parser = new SysYParser(tokens);
         ParseTree tree = parser.program();
 
-        SysYVisitorImpl visitor = new SysYVisitorImpl();
+        SysYVisitorImpl visitor = new SysYVisitorImpl(new Module());
         visitor.visit(tree);
     }
 }

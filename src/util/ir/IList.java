@@ -19,6 +19,7 @@ public class IList<V,P> implements Iterable<IListNode<V,P>> {
     private int numNode;
     private IListNode<V,P> first;
     private IListNode<V,P> last;
+    private P owner;
 
     public IList() {
         numNode = 0;
@@ -34,9 +35,9 @@ public class IList<V,P> implements Iterable<IListNode<V,P>> {
         return node;
     }
 
-    public boolean insertBefore(IListNode<V,P> node) {
+    public boolean insertBefore(IListNode<V,P> node, IListNode<V,P> insertBefore) {
         var i = this.first;
-        while(i != null && !i.equals(node)){
+        while(i != null && !i.equals(insertBefore)){
             i = i.getNext();
         }
         if(i == null)
@@ -52,11 +53,14 @@ public class IList<V,P> implements Iterable<IListNode<V,P>> {
             this.first = node;
             this.last = node;
             numNode++;
+            node.setParent(owner);
             return true;
         }
         boolean b = node.setPrev(this.last) || this.last.setNext(node);
-        if(b)
+        if(b) {
+            node.setParent(owner);
             numNode++;
+        }
         return b;
     }
 

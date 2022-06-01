@@ -7,4 +7,5 @@ public interface IListNode<V, P> {
     P getParent();
     boolean setNext(IListNode<V,P> node);
     boolean setPrev(IListNode<V,P> node);
+    boolean setParent(P parent);
 }

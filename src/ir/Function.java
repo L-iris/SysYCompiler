@@ -1,10 +1,13 @@
 package ir;
 
 import ir.types.FunctionType;
+import ir.types.Type;
 import util.ir.IList;
 import util.ir.IListNode;
 
+import javax.lang.model.element.TypeElement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -23,29 +26,68 @@ public class Function extends Constant implements IListNode<Function,Module>, It
         }
     }
 
-    private Function prev;
-    private Function next;
+    private IListNode<Function, Module> prev;
+    private IListNode<Function, Module> next;
     private Module parent;
 
     private List<Arg> argList;
 
     private boolean isBuiltin;
-    IList<BasicBlock, Function> basicBlockIlist;
+    public IList<BasicBlock, Function> basicBlockIlist;
 
-    public Function(FunctionType functionType, String name, List<Arg> argList, boolean isBuiltin, Module parent, Function insertBefore) {
+    public Function(FunctionType functionType, String name, List<Arg> argList, boolean isBuiltin, Module parent) {
         super(functionType, name);
         this.argList = argList;
         this.parent = parent;
         this.isBuiltin = isBuiltin;
-        if(insertBefore == null) {
-
-        } else {
-
-        }
     }
-    public Function(FunctionType functionType, String name) {
-        super(functionType, name);
-        this.argList = new ArrayList<>();
+
+    public static Function create(FunctionType functionType, String name, List<Arg> argList, boolean isBuiltin, Module parent, Function insertBefore) {
+        Function function = new Function(functionType, name, argList, isBuiltin, parent);
+        function.parent.functions.insertBefore(function, insertBefore);
+        return function;
+    }
+
+    public static Function create(FunctionType functionType, String name, List<Arg> argList, boolean isBuiltin, Module parent) {
+        Function function = new Function(functionType, name, argList, isBuiltin, parent);
+        function.parent.functions.insertAtEnd(function);
+        return function;
+    }
+
+    public static Function create(FunctionType functionType, String name, boolean isBuiltin, Module parent, Function insertBefore) {
+        Function function = new Function(functionType, name, new ArrayList<>(), isBuiltin, parent);
+        function.parent.functions.insertBefore(function, insertBefore);
+        return function;
+    }
+
+    public static Function create(FunctionType functionType, String name, boolean isBuiltin, Module parent) {
+        Function function = new Function(functionType, name, new ArrayList<>(), isBuiltin, parent);
+        function.parent.functions.insertAtEnd(function);
+        return function;
+    }
+
+    public static Function create(boolean isBuiltin, Module parent, Function insertBefore, Type retType, String name, Arg... args) {
+        FunctionType functionType;
+        if(args.length != 0) {
+            Type[] paramsType = new Type[args.length];
+            Arrays.sort(args);
+            for (int i = 0; i < args.length; i++) {
+                paramsType[i] = args[i].getType();
+            }
+            functionType = Type.functionType(retType, paramsType);
+        } else {
+            functionType = Type.functionType(retType);
+        }
+        Function function = new Function(functionType, name, List.of(args), isBuiltin, parent);
+        if(insertBefore == null)
+            function.parent.functions.insertAtEnd(function);
+        else
+            function.parent.functions.insertBefore(function, insertBefore);
+        return function;
+    }
+
+    public static Function create(boolean isBuiltin, Module parent, Type retType, String name, Arg... args) {
+        return create(isBuiltin, parent, null, retType, name, args);
     }
 
 
@@ -76,11 +118,19 @@ public class Function extends Constant implements IListNode<Function,Module>, It
 
     @Override
     public boolean setNext(IListNode<Function, Module> node) {
+        this.next = node;
         return false;
     }
 
     @Override
     public boolean setPrev(IListNode<Function, Module> node) {
+        this.prev = node;
+        return false;
+    }
+
+    @Override
+    public boolean setParent(Module parent) {
+        this.parent = parent;
         return false;
     }
 

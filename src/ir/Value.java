@@ -43,4 +43,16 @@ public class Value {
     public String getName() {
         return name;
     }
+
+    public void setType(Type type) {
+        this.type = type;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public boolean addUse(Use use) {
+        return this.useList.add(use);
+    }
 }

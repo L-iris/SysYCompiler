@@ -1,31 +1,70 @@
 package frontend;
 
-import ir.Arg;
-import ir.Function;
-import ir.types.ArrayType;
-import ir.types.FunctionType;
+import ir.*;
+import ir.Module;
 import ir.types.Type;
 import util.SymbolTableStack;
 import util.frontend.SysYBaseVisitor;
 import util.frontend.SysYParser;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
-public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
+public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
+
+    private class GlobalVariableContext {
+        class GlobalVariableInfo {
+            String name;
+            List<Integer> dim;
+            List<Value> initValue;
+        }
+        boolean isConst;
+        Type bType;
+        int cursor;
+        List<GlobalVariableInfo> globalVariableInfos;
+
+        public GlobalVariableContext() {
+            this.cursor = 0;
+            this.globalVariableInfos = new ArrayList<>();
+            this.globalVariableInfos.add(new GlobalVariableInfo());
+        }
+
+        public GlobalVariableInfo info() {
+            return this.globalVariableInfos.get(cursor);
+        }
+
+        public GlobalVariableInfo nextOne() {
+            GlobalVariableInfo globalVariableInfo = new GlobalVariableInfo();
+            cursor++;
+            this.globalVariableInfos.add(globalVariableInfo);
+            return globalVariableInfo;
+        }
+    }
+
+    enum ValueType {
+        GlobalVariable,
+    }
 
     public SymbolTableStack symbolTableStack;
+    public Module module;
+    private ValueType valueType;
+    private GlobalVariableContext globalVariableContext;
+    private Function function;
+    private BasicBlock basicBlock;
 
-    public SysYVisitorImpl() {
+    public SysYVisitorImpl(Module module) {
         this.symbolTableStack = new SymbolTableStack();
+        this.module = module;
     }
 
     /**
      * program
      *     : compUnit
      *     ;
+     * @return
      */
     @Override
-    public Void visitProgram(SysYParser.ProgramContext ctx) {
+    public Value visitProgram(SysYParser.ProgramContext ctx) {
         return super.visitProgram(ctx);
     }
 
@@ -33,15 +72,14 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * compUnit
      *     : (funcDef|decl)+
      *     ;
+     * @return
      */
     @Override
-    public Void visitCompUnit(SysYParser.CompUnitContext ctx) {
+    public Value visitCompUnit(SysYParser.CompUnitContext ctx) {
         symbolTableStack.enterScope();
-        symbolTableStack.addValue(new Function(Type.functionType(Type.i32()), "getint"));
-        symbolTableStack.addValue(new Function(Type.functionType(Type.i32()), "getch"));
-        symbolTableStack.addValue(new Function(
-                Type.functionType(Type.f32()),"getfloat"
-        ));
+        symbolTableStack.addValue(Function.create(true, module, Type.i32(), "getint"));
+        symbolTableStack.addValue(Function.create(true, module, Type.i32(), "getch"));
+        symbolTableStack.addValue(Function.create(true, module, Type.i32(), "getarray", Arg.create(0, Type.arrayType(Type.i32()), "a")));
         return super.visitCompUnit(ctx);
     }
 
@@ -50,9 +88,14 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      *     : constDecl
      *     | varDecl
      *     ;
+     * @return
      */
     @Override
-    public Void visitDecl(SysYParser.DeclContext ctx) {
+    public Value visitDecl(SysYParser.DeclContext ctx) {
+        if(this.symbolTableStack.isGlobal()) {
+            this.valueType = ValueType.GlobalVariable;
+            this.globalVariableContext = new GlobalVariableContext();
+        }
         return super.visitDecl(ctx);
     }
 
@@ -64,7 +107,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitConstDecl(SysYParser.ConstDeclContext ctx) {
+    public Value visitConstDecl(SysYParser.ConstDeclContext ctx) {
+        if(this.valueType == ValueType.GlobalVariable){
+            this.globalVariableContext.isConst = true;
+        }
         return super.visitConstDecl(ctx);
     }
 
@@ -76,7 +122,13 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitBType(SysYParser.BTypeContext ctx) {
+    public Value visitBType(SysYParser.BTypeContext ctx) {
+        if(this.valueType == ValueType.GlobalVariable) {
+            if(ctx.INT() != null)
+                this.globalVariableContext.bType = Type.i32();
+            else
+                this.globalVariableContext.bType = Type.f32();
+        }
         return super.visitBType(ctx);
     }
 
@@ -88,7 +140,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitConstDef(SysYParser.ConstDefContext ctx) {
+    public Value visitConstDef(SysYParser.ConstDefContext ctx) {
         return super.visitConstDef(ctx);
     }
 
@@ -101,7 +153,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitConstInitVal(SysYParser.ConstInitValContext ctx) {
+    public Value visitConstInitVal(SysYParser.ConstInitValContext ctx) {
         return super.visitConstInitVal(ctx);
     }
 
@@ -113,7 +165,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitVarDecl(SysYParser.VarDeclContext ctx) {
+    public Value visitVarDecl(SysYParser.VarDeclContext ctx) {
+        if(this.valueType == ValueType.GlobalVariable) {
+
+        }
         return super.visitVarDecl(ctx);
     }
 
@@ -125,7 +180,13 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitVarDef(SysYParser.VarDefContext ctx) {
+    public Value visitVarDef(SysYParser.VarDefContext ctx) {
+        if(this.valueType == ValueType.GlobalVariable) {
+            if (ctx.LB().size() == 0) {
+                this.globalVariableContext.info().dim = null;
+                this.globalVariableContext.info().name = ctx.Identifier().getText() + ".addr";
+            }
+        }
         return super.visitVarDef(ctx);
     }
 
@@ -138,7 +199,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitInitVal(SysYParser.InitValContext ctx) {
+    public Value visitInitVal(SysYParser.InitValContext ctx) {
+        if(this.valueType == ValueType.GlobalVariable) {
+
+        }
         return super.visitInitVal(ctx);
     }
 
@@ -150,7 +214,8 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitFuncDef(SysYParser.FuncDefContext ctx) {
+    public Value visitFuncDef(SysYParser.FuncDefContext ctx) {
+        ctx.funcType().getText();
         return super.visitFuncDef(ctx);
     }
 
@@ -162,7 +227,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitFuncType(SysYParser.FuncTypeContext ctx) {
+    public Value visitFuncType(SysYParser.FuncTypeContext ctx) {
         return super.visitFuncType(ctx);
     }
 
@@ -174,7 +239,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitFuncFParams(SysYParser.FuncFParamsContext ctx) {
+    public Value visitFuncFParams(SysYParser.FuncFParamsContext ctx) {
         return super.visitFuncFParams(ctx);
     }
 
@@ -186,7 +251,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitFuncFParam(SysYParser.FuncFParamContext ctx) {
+    public Value visitFuncFParam(SysYParser.FuncFParamContext ctx) {
         return super.visitFuncFParam(ctx);
     }
 
@@ -198,7 +263,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitBlock(SysYParser.BlockContext ctx) {
+    public Value visitBlock(SysYParser.BlockContext ctx) {
         return super.visitBlock(ctx);
     }
 
@@ -210,7 +275,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitBlockItem(SysYParser.BlockItemContext ctx) {
+    public Value visitBlockItem(SysYParser.BlockItemContext ctx) {
         return super.visitBlockItem(ctx);
     }
 
@@ -229,10 +294,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitStmt(SysYParser.StmtContext ctx) {
+    public Value visitStmt(SysYParser.StmtContext ctx) {
         return super.visitStmt(ctx);
     }
-
+    Value exprValue;
     /**
      * expr
      *     :addExpr
@@ -241,7 +306,8 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitExpr(SysYParser.ExprContext ctx) {
+    public Value visitExpr(SysYParser.ExprContext ctx) {
+
         return super.visitExpr(ctx);
     }
 
@@ -253,7 +319,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitCond(SysYParser.CondContext ctx) {
+    public Value visitCond(SysYParser.CondContext ctx) {
         return super.visitCond(ctx);
     }
 
@@ -265,7 +331,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitLVal(SysYParser.LValContext ctx) {
+    public Value visitLVal(SysYParser.LValContext ctx) {
         return super.visitLVal(ctx);
     }
 
@@ -279,7 +345,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitPrimaryExpr(SysYParser.PrimaryExprContext ctx) {
+    public Value visitPrimaryExpr(SysYParser.PrimaryExprContext ctx) {
         return super.visitPrimaryExpr(ctx);
     }
 
@@ -292,7 +358,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitNumber(SysYParser.NumberContext ctx) {
+    public Value visitNumber(SysYParser.NumberContext ctx) {
         return super.visitNumber(ctx);
     }
 
@@ -306,7 +372,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitUnaryExpr(SysYParser.UnaryExprContext ctx) {
+    public Value visitUnaryExpr(SysYParser.UnaryExprContext ctx) {
         return super.visitUnaryExpr(ctx);
     }
 
@@ -318,7 +384,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitUnaryOp(SysYParser.UnaryOpContext ctx) {
+    public Value visitUnaryOp(SysYParser.UnaryOpContext ctx) {
         return super.visitUnaryOp(ctx);
     }
 
@@ -330,7 +396,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitFuncRParams(SysYParser.FuncRParamsContext ctx) {
+    public Value visitFuncRParams(SysYParser.FuncRParamsContext ctx) {
         return super.visitFuncRParams(ctx);
     }
 
@@ -342,7 +408,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitMulExpr(SysYParser.MulExprContext ctx) {
+    public Value visitMulExpr(SysYParser.MulExprContext ctx) {
         return super.visitMulExpr(ctx);
     }
 
@@ -354,8 +420,63 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitAddExpr(SysYParser.AddExprContext ctx) {
+    public Value visitAddExpr(SysYParser.AddExprContext ctx) {
+        Value operand1 = visitMulExpr(ctx.mulExpr(0));
+        for(int i = 1; i < ctx.mulExpr().size(); i++) {
+            Value operand2 = visitMulExpr(ctx.mulExpr(i));
+            if(isConst(operand1) & isConst(operand2)) {
+                if(ctx.getChild(2 * i - 1).getText().equals("+"))
+                    operand1 = constAdd(operand1, operand2);
+                else
+                    operand1 = constMinus(operand1, operand2);
+            } else if(operand1.getType().getTypeID() == Type.TypeID.IntegerTyID & operand2.getType().getTypeID() == Type.TypeID.IntegerTyID) {
+                if(ctx.getChild(2 * i - 1).getText().equals("+"))
+                    operand1 = Instruction.create(basicBlock,  Type.i32(), null, Instruction.InstType.ADD, 2, operand1, operand2);
+                else
+                    operand1 = Instruction.create(basicBlock,  Type.i32(), null, Instruction.InstType.SUB, 2, operand1, operand2);
+            } else {
+                //TODO
+            }
+        }
         return super.visitAddExpr(ctx);
+    }
+
+    private boolean isConst(Value v) {
+        return v instanceof ConstInt | v instanceof ConstFloat;
+    }
+
+    private Value constAdd(Value v1, Value v2) {
+        if(v1 instanceof ConstInt) {
+            if(v2 instanceof ConstInt) {
+                return new ConstInt(((ConstInt) v1).value + ((ConstInt) v2).value);
+            } else if(v2 instanceof ConstFloat) {
+                return new ConstFloat(((ConstInt) v1).value + ((ConstFloat) v2).value);
+            }
+        } else if(v1 instanceof ConstFloat) {
+            if(v2 instanceof ConstInt) {
+                return new ConstFloat(((ConstFloat) v1).value + ((ConstInt) v2).value);
+            } else if(v2 instanceof ConstFloat) {
+                return new ConstFloat(((ConstFloat) v1).value + ((ConstFloat) v2).value);
+            }
+        }
+        return null;
+    }
+
+    private Value constMinus(Value v1, Value v2) {
+        if(v1 instanceof ConstInt) {
+            if(v2 instanceof ConstInt) {
+                return new ConstInt(((ConstInt) v1).value - ((ConstInt) v2).value);
+            } else if(v2 instanceof ConstFloat) {
+                return new ConstFloat(((ConstInt) v1).value - ((ConstFloat) v2).value);
+            }
+        } else if(v1 instanceof ConstFloat) {
+            if(v2 instanceof ConstInt) {
+                return new ConstFloat(((ConstFloat) v1).value - ((ConstInt) v2).value);
+            } else if(v2 instanceof ConstFloat) {
+                return new ConstFloat(((ConstFloat) v1).value - ((ConstFloat) v2).value);
+            }
+        }
+        return null;
     }
 
     /**
@@ -366,7 +487,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitRelExpr(SysYParser.RelExprContext ctx) {
+    public Value visitRelExpr(SysYParser.RelExprContext ctx) {
         return super.visitRelExpr(ctx);
     }
 
@@ -378,7 +499,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitEqExpr(SysYParser.EqExprContext ctx) {
+    public Value visitEqExpr(SysYParser.EqExprContext ctx) {
         return super.visitEqExpr(ctx);
     }
 
@@ -390,7 +511,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitLAndExpr(SysYParser.LAndExprContext ctx) {
+    public Value visitLAndExpr(SysYParser.LAndExprContext ctx) {
         return super.visitLAndExpr(ctx);
     }
 
@@ -402,7 +523,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitLOrExpr(SysYParser.LOrExprContext ctx) {
+    public Value visitLOrExpr(SysYParser.LOrExprContext ctx) {
         return super.visitLOrExpr(ctx);
     }
 
@@ -414,7 +535,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Void> {
      * @return
      */
     @Override
-    public Void visitConstExpr(SysYParser.ConstExprContext ctx) {
+    public Value visitConstExpr(SysYParser.ConstExprContext ctx) {
         return super.visitConstExpr(ctx);
     }
 }
