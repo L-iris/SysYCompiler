@@ -14,19 +14,26 @@ public class GlobalVariable extends Constant implements IListNode<GlobalVariable
 
     private boolean isConst;
 
-    private int initInt;
-    private float initFloat;
 
-    public GlobalVariable(Type type, String name, int numUserOperands, List<Value> userOperands, List<Use> useList, boolean isConst, Module parent) {
-        super(type, name, numUserOperands, userOperands, useList);
+    public GlobalVariable(Type type, String name, boolean isConst, Value userOperand) {
+        super(type, name, 1, userOperand);
         this.isConst = isConst;
-        if(parent != null)
-            parent.globalVariables.insertAtEnd(this);
     }
 
+    public static GlobalVariable create(Module parent, GlobalVariable insertBefore, Type resultType, String resultName, boolean isConst, Value userOperand){
+        GlobalVariable globalVariable = new GlobalVariable(resultType, resultName, isConst, userOperand);
+        parent.globalVariables.insertBefore(globalVariable, insertBefore);
+        return globalVariable;
+    }
+
+    public static GlobalVariable create(Module parent, Type resultType, String resultName, boolean isConst, Value userOperand){
+        GlobalVariable globalVariable = new GlobalVariable(resultType, resultName, isConst, userOperand);
+        parent.globalVariables.insertAtEnd(globalVariable);
+        return globalVariable;
+    }
 
     public static GlobalVariable create() {
-        return new GlobalVariable(null, null, 0, new ArrayList<>(), new ArrayList<>(), false, null);
+        return new GlobalVariable(null, null, true, null);
     }
 
     public boolean isConst() {

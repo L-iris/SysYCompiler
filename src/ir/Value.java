@@ -15,11 +15,11 @@ public class Value {
     protected List<Use> useList;
     protected String name;
 
-    public Value(Type type, List<Use> useList, String name) {
-        this.type = type;
-        this.useList = useList;
-        this.name = name;
-    }
+//    public Value(Type type, List<Use> useList, String name) {
+//        this.type = type;
+//        this.useList = useList;
+//        this.name = name;
+//    }
 
     public Value(Type type, String name) {
         this.type = type;
@@ -53,6 +53,8 @@ public class Value {
     }
 
     public boolean addUse(Use use) {
+        if(useList.contains(use))
+            return true;
         return this.useList.add(use);
     }
 }

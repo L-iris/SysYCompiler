@@ -185,6 +185,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             if (ctx.LB().size() == 0) {
                 this.globalVariableContext.info().dim = null;
                 this.globalVariableContext.info().name = ctx.Identifier().getText() + ".addr";
+                Type bType = this.globalVariableContext.bType;
+                Value initVal = visit(ctx.initVal());
+                GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", false, initVal);
+
             }
         }
         return super.visitVarDef(ctx);
@@ -215,7 +219,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitFuncDef(SysYParser.FuncDefContext ctx) {
-        ctx.funcType().getText();
+
         return super.visitFuncDef(ctx);
     }
 

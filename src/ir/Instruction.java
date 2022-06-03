@@ -59,11 +59,11 @@ public class Instruction extends User implements IListNode<Instruction, BasicBlo
         GEP,
     }
 
-    private IListNode<Instruction, BasicBlock> next;
-    private IListNode<Instruction, BasicBlock> prev;
-    private BasicBlock parent;
+    protected IListNode<Instruction, BasicBlock> next;
+    protected IListNode<Instruction, BasicBlock> prev;
+    protected BasicBlock parent;
 
-    private InstType instType;
+    protected InstType instType;
 
     public static Instruction create(BasicBlock parent, Instruction insertBefore, Type resultType, String resultName, InstType instType, int numUserOperands, Value... userOperands){
         Instruction instruction = new Instruction(resultType, resultName, instType, numUserOperands, userOperands);
@@ -77,7 +77,7 @@ public class Instruction extends User implements IListNode<Instruction, BasicBlo
         return instruction;
     }
 
-    public Instruction(Type resultType, String resultName, InstType instType, int numUserOperands, Value[] userOperands) {
+    public Instruction(Type resultType, String resultName, InstType instType, int numUserOperands, Value... userOperands) {
         super(resultType, resultName, numUserOperands, List.of(userOperands));
         this.instType = instType;
     }
