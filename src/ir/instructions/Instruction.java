@@ -1,10 +1,10 @@
-package ir;
+package ir.instructions;
 
+import ir.BasicBlock;
+import ir.User;
+import ir.Value;
 import ir.types.Type;
-import util.ir.IList;
 import util.ir.IListNode;
-
-import java.util.List;
 
 public class Instruction extends User implements IListNode<Instruction, BasicBlock> {
 
@@ -77,8 +77,23 @@ public class Instruction extends User implements IListNode<Instruction, BasicBlo
         return instruction;
     }
 
+    public Instruction(BasicBlock parent, Instruction insertBefore, Type resultType, String resultName, InstType instType, int numUserOperands, Value... userOperands) {
+        super(resultType, resultName, numUserOperands, userOperands);
+        if(insertBefore == null)
+            parent.instructionIList.insertAtEnd(this);
+        else
+            parent.instructionIList.insertBefore(this, insertBefore);
+        this.instType = instType;
+    }
+
+    public Instruction(BasicBlock parent, Type resultType, String resultName, InstType instType, int numUserOperands, Value... userOperands) {
+        super(resultType, resultName, numUserOperands, userOperands);
+        parent.instructionIList.insertAtEnd(this);
+        this.instType = instType;
+    }
+
     public Instruction(Type resultType, String resultName, InstType instType, int numUserOperands, Value... userOperands) {
-        super(resultType, resultName, numUserOperands, List.of(userOperands));
+        super(resultType, resultName, numUserOperands, userOperands);
         this.instType = instType;
     }
 

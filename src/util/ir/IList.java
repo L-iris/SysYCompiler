@@ -42,9 +42,12 @@ public class IList<V,P> implements Iterable<IListNode<V,P>> {
         }
         if(i == null)
             return false;
-        boolean b = i.getPrev().setNext(node) || i.setPrev(node);
-        if(b)
+        boolean b = node.setPrev(i.getPrev()) | node.setNext(i);
+        b = b | i.getPrev().setNext(node) | i.setPrev(node);
+        if(b) {
+            node.setParent(owner);
             numNode++;
+        }
         return b;
     }
 
@@ -54,9 +57,11 @@ public class IList<V,P> implements Iterable<IListNode<V,P>> {
             this.last = node;
             numNode++;
             node.setParent(owner);
+            node.setPrev(null);
+            node.setNext(null);
             return true;
         }
-        boolean b = node.setPrev(this.last) || this.last.setNext(node);
+        boolean b = node.setPrev(this.last) | node.setNext(null) | this.last.setNext(node);
         if(b) {
             node.setParent(owner);
             numNode++;

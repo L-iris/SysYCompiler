@@ -45,6 +45,7 @@ public class User extends Value{
     public User(Type type, String name, int numUserOperands) {
         super(type, name);
         this.numUserOperands = numUserOperands;
+        this.userOperands = new ArrayList<>(numUserOperands);
     }
 
     public User(Type type, String name) {

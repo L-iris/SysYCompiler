@@ -1,5 +1,6 @@
 package ir;
 
+import ir.instructions.Instruction;
 import ir.types.Type;
 import util.ir.IList;
 import util.ir.IListNode;

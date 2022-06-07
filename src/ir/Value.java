@@ -57,4 +57,8 @@ public class Value {
             return true;
         return this.useList.add(use);
     }
+
+    public static Value create(Type type, String name) {
+        return new Value(type, name);
+    }
 }

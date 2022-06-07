@@ -54,6 +54,10 @@ public class Type {
         return new ArrayType(containedType, 0);
     }
 
+    public static PointerType pointerType(Type containedType) {
+        return new PointerType(containedType);
+    }
+
     public static FunctionType functionType(Type retType, Type... paramTypes) {
         return new FunctionType(retType, List.of(paramTypes));
     }

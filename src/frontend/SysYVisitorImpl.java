@@ -2,6 +2,7 @@ package frontend;
 
 import ir.*;
 import ir.Module;
+import ir.instructions.Instruction;
 import ir.types.Type;
 import util.SymbolTableStack;
 import util.frontend.SysYBaseVisitor;
@@ -12,45 +13,25 @@ import java.util.List;
 
 public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
 
-    private class GlobalVariableContext {
-        class GlobalVariableInfo {
-            String name;
-            List<Integer> dim;
-            List<Value> initValue;
+    private class VisitCtx {
+        enum Phase {
+            GlobalVariable,
+            GlobalArray,
+            Function,
         }
-        boolean isConst;
+
+        Phase phase;
         Type bType;
-        int cursor;
-        List<GlobalVariableInfo> globalVariableInfos;
-
-        public GlobalVariableContext() {
-            this.cursor = 0;
-            this.globalVariableInfos = new ArrayList<>();
-            this.globalVariableInfos.add(new GlobalVariableInfo());
-        }
-
-        public GlobalVariableInfo info() {
-            return this.globalVariableInfos.get(cursor);
-        }
-
-        public GlobalVariableInfo nextOne() {
-            GlobalVariableInfo globalVariableInfo = new GlobalVariableInfo();
-            cursor++;
-            this.globalVariableInfos.add(globalVariableInfo);
-            return globalVariableInfo;
-        }
-    }
-
-    enum ValueType {
-        GlobalVariable,
+        Type type;
+        boolean isConst;
+        boolean isGlobal;
     }
 
     public SymbolTableStack symbolTableStack;
     public Module module;
-    private ValueType valueType;
-    private GlobalVariableContext globalVariableContext;
     private Function function;
     private BasicBlock basicBlock;
+    private VisitCtx visitCtx = new VisitCtx();
 
     public SysYVisitorImpl(Module module) {
         this.symbolTableStack = new SymbolTableStack();
@@ -77,9 +58,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
     @Override
     public Value visitCompUnit(SysYParser.CompUnitContext ctx) {
         symbolTableStack.enterScope();
-        symbolTableStack.addValue(Function.create(true, module, Type.i32(), "getint"));
-        symbolTableStack.addValue(Function.create(true, module, Type.i32(), "getch"));
-        symbolTableStack.addValue(Function.create(true, module, Type.i32(), "getarray", Arg.create(0, Type.arrayType(Type.i32()), "a")));
+        this.visitCtx.isGlobal = true;
+        symbolTableStack.addValue("getint", Function.create(true, module, Type.i32(), "getint"));
+        symbolTableStack.addValue("getch", Function.create(true, module, Type.i32(), "getch"));
+        symbolTableStack.addValue("getarray", Function.create(true, module, Type.i32(), "getarray", Arg.create(0, Type.arrayType(Type.i32()), "a")));
         return super.visitCompUnit(ctx);
     }
 
@@ -92,10 +74,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitDecl(SysYParser.DeclContext ctx) {
-        if(this.symbolTableStack.isGlobal()) {
-            this.valueType = ValueType.GlobalVariable;
-            this.globalVariableContext = new GlobalVariableContext();
-        }
         return super.visitDecl(ctx);
     }
 
@@ -108,9 +86,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitConstDecl(SysYParser.ConstDeclContext ctx) {
-        if(this.valueType == ValueType.GlobalVariable){
-            this.globalVariableContext.isConst = true;
-        }
+        this.visitCtx.isConst = true;
         return super.visitConstDecl(ctx);
     }
 
@@ -123,12 +99,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitBType(SysYParser.BTypeContext ctx) {
-        if(this.valueType == ValueType.GlobalVariable) {
-            if(ctx.INT() != null)
-                this.globalVariableContext.bType = Type.i32();
-            else
-                this.globalVariableContext.bType = Type.f32();
-        }
+        if(ctx.INT() != null)
+            this.visitCtx.bType = Type.i32();
+        else
+            this.visitCtx.bType = Type.f32();
         return super.visitBType(ctx);
     }
 
@@ -166,9 +140,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitVarDecl(SysYParser.VarDeclContext ctx) {
-        if(this.valueType == ValueType.GlobalVariable) {
-
-        }
         return super.visitVarDecl(ctx);
     }
 
@@ -181,15 +152,36 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitVarDef(SysYParser.VarDefContext ctx) {
-        if(this.valueType == ValueType.GlobalVariable) {
-            if (ctx.LB().size() == 0) {
-                this.globalVariableContext.info().dim = null;
-                this.globalVariableContext.info().name = ctx.Identifier().getText() + ".addr";
-                Type bType = this.globalVariableContext.bType;
-                Value initVal = visit(ctx.initVal());
-                GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", false, initVal);
+        if(this.symbolTableStack.findValueCurrentScope(ctx.Identifier().getText()) != null){
+            //重定义error
+        }
+        Type bType = this.visitCtx.bType;
+        Value initVal = null;
+        if(this.visitCtx.isGlobal) { //全局
+            if (ctx.LB().size() == 0) { //全局变量
+                initVal = visit(ctx.initVal());
+            } else { //全局数组
+                List<Integer> dims = new ArrayList<>(ctx.constExpr().size());
+                for (SysYParser.ConstExprContext constExprContext : ctx.constExpr()) {
+                    Value v = visit(constExprContext);
+                    if(v == null){
+                        //数组维度非常数error
+                    } else if(!(v instanceof ConstInt)){
+                        //数组维度非整数error
+                    } else{
+                        dims.add(((ConstInt) v).value);
+                    }
+                }
+                for(int i = dims.size() - 1; i >= 0; i--){
+                    bType = Type.arrayType(bType, dims.get(i));
+                }
+                initVal = visit(ctx.initVal());
 
             }
+            GlobalVariable globalVariable = GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", false, initVal);
+            this.symbolTableStack.addValue(ctx.Identifier().getText(), globalVariable);
+        } else { //局部
+
         }
         return super.visitVarDef(ctx);
     }
@@ -204,9 +196,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitInitVal(SysYParser.InitValContext ctx) {
-        if(this.valueType == ValueType.GlobalVariable) {
-
-        }
         return super.visitInitVal(ctx);
     }
 

@@ -37,8 +37,16 @@ public class SymbolTableStack {
         return this.findSymbolTable(name) == null? null : findSymbolTable(name).find(name);
     }
 
-    public boolean addValue(Value value) {
-        return currentSymbolTable().addValue(value);
+    public Value findValueCurrentScope(String name) {
+        SymbolTable symbolTable = findSymbolTable(name);
+        if(symbolTable == this.currentSymbolTable()) {
+            return findValue(name);
+        }
+        return null;
+    }
+
+    public boolean addValue(String name, Value value) {
+        return currentSymbolTable().addValue(name, value);
     }
 
     public boolean isGlobal() {

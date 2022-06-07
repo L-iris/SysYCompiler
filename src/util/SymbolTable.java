@@ -3,25 +3,24 @@ package util;
 import ir.Value;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SymbolTable {
-    private List<Value> valueList;
+    private Map<String, Value> stringValueMap;
 
     public SymbolTable() {
-        this.valueList = new ArrayList<>();
+        this.stringValueMap = new HashMap<>();
     }
 
     public Value find(String name) {
-        for(var v : valueList)
-            if(name.equals(v.getName()))
-                return v;
-        return null;
+        return this.stringValueMap.get(name);
     }
 
-    public boolean addValue(Value value) {
-        if(find(value.getName()) != null)
+    public boolean addValue(String name, Value value) {
+        if(this.stringValueMap.containsKey(name))
             return false;
-        return valueList.add(value);
+        return this.stringValueMap.put(name, value) == null;
     }
 }
