@@ -65,13 +65,13 @@ public class Instruction extends User implements IListNode<Instruction, BasicBlo
 
     protected InstType instType;
 
-    public static Instruction create(BasicBlock parent, Instruction insertBefore, Type resultType, String resultName, InstType instType, int numUserOperands, Value... userOperands){
+    protected static Instruction create(BasicBlock parent, Instruction insertBefore, Type resultType, String resultName, InstType instType, int numUserOperands, Value... userOperands){
         Instruction instruction = new Instruction(resultType, resultName, instType, numUserOperands, userOperands);
         parent.instructionIList.insertBefore(instruction, insertBefore);
         return instruction;
     }
 
-    public static Instruction create(BasicBlock parent, Type resultType, String resultName, InstType instType, int numUserOperands, Value... userOperands){
+    protected static Instruction create(BasicBlock parent, Type resultType, String resultName, InstType instType, int numUserOperands, Value... userOperands){
         Instruction instruction = new Instruction(resultType, resultName, instType, numUserOperands, userOperands);
         parent.instructionIList.insertAtEnd(instruction);
         return instruction;

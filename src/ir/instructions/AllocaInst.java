@@ -18,4 +18,10 @@ public class AllocaInst extends Instruction{
         return allocaInst;
     }
 
+    public static AllocaInst create(BasicBlock parent, String resultName, Type allocType) {
+        AllocaInst allocaInst = new AllocaInst(parent, null, Type.pointerType(allocType), resultName, InstType.ALLOCA, 0);
+        allocaInst.allocType = allocType;
+        return allocaInst;
+    }
+
 }

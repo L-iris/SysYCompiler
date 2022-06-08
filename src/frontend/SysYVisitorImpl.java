@@ -2,6 +2,8 @@ package frontend;
 
 import ir.*;
 import ir.Module;
+import ir.instructions.AllocaInst;
+import ir.instructions.BinaryInst;
 import ir.instructions.Instruction;
 import ir.types.Type;
 import util.SymbolTableStack;
@@ -13,7 +15,7 @@ import java.util.List;
 
 public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
 
-    private class VisitCtx {
+    private static class VisitCtx {
         enum Phase {
             GlobalVariable,
             GlobalArray,
@@ -181,7 +183,12 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             GlobalVariable globalVariable = GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", false, initVal);
             this.symbolTableStack.addValue(ctx.Identifier().getText(), globalVariable);
         } else { //局部
+            if(ctx.LB().size() == 0) { //局部变量
+                initVal = visit(ctx.initVal());
+            } else { //局部数组
 
+            }
+            AllocaInst.create(basicBlock, null, bType);
         }
         return super.visitVarDef(ctx);
     }
@@ -221,6 +228,13 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitFuncType(SysYParser.FuncTypeContext ctx) {
+        if(ctx.INT() != null) {
+            this.visitCtx.bType = Type.i32();
+        } else if(ctx.FLOAT() != null){
+            this.visitCtx.bType = Type.f32();
+        } else if(ctx.VOID() != null){
+            this.visitCtx.bType = Type.voidType();
+        }
         return super.visitFuncType(ctx);
     }
 
@@ -424,9 +438,9 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                     operand1 = constMinus(operand1, operand2);
             } else if(operand1.getType().getTypeID() == Type.TypeID.IntegerTyID & operand2.getType().getTypeID() == Type.TypeID.IntegerTyID) {
                 if(ctx.getChild(2 * i - 1).getText().equals("+"))
-                    operand1 = Instruction.create(basicBlock,  Type.i32(), null, Instruction.InstType.ADD, 2, operand1, operand2);
+                    operand1 = BinaryInst.create(basicBlock, Type.i32(), null, Instruction.InstType.ADD, operand1, operand2);
                 else
-                    operand1 = Instruction.create(basicBlock,  Type.i32(), null, Instruction.InstType.SUB, 2, operand1, operand2);
+                    operand1 = BinaryInst.create(basicBlock, Type.i32(), null, Instruction.InstType.SUB, operand1, operand2);
             } else {
                 //TODO
             }
