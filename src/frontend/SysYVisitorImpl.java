@@ -2,6 +2,8 @@ package frontend;
 
 import ir.*;
 import ir.Module;
+import ir.constval.ConstFloat;
+import ir.constval.ConstInt;
 import ir.instructions.AllocaInst;
 import ir.instructions.BinaryInst;
 import ir.instructions.Instruction;

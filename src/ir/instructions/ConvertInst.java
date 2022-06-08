@@ -1,7 +1,6 @@
 package ir.instructions;
 
 import ir.BasicBlock;
-import ir.ConstInt;
 import ir.Value;
 import ir.types.Type;
 
