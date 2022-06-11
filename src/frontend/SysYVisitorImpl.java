@@ -2,21 +2,31 @@ package frontend;
 
 import ir.*;
 import ir.Module;
+import ir.constval.ConstArray;
 import ir.constval.ConstFloat;
 import ir.constval.ConstInt;
+import ir.instructions.AllocaInst;
 import ir.instructions.BinaryInst;
 import ir.instructions.Instruction;
+import ir.instructions.StoreInst;
 import ir.types.Type;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.RuleNode;
 import util.SymbolTableStack;
 import util.frontend.SysYBaseVisitor;
 import util.frontend.SysYParser;
 
+import javax.security.auth.callback.Callback;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
 
     private static class VisitCtx {
+        public Type retType;
+        public Function function;
+
         enum Phase {
             GlobalVariable,
             GlobalArray,
@@ -26,6 +36,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         Phase phase;
         Type bType;
         Type type;
+        List<Arg> args;
         boolean isConst;
         boolean isGlobal;
         boolean isConstExpr;
@@ -41,6 +52,28 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         this.symbolTableStack = new SymbolTableStack();
         this.module = module;
         this.visitCtx = new VisitCtx();
+    }
+
+    private Value visitChildrenCallBack(RuleNode node, Callable<Void> beforeVisit, Callable<Void> afterVisit) {
+        Value result = this.defaultResult();
+        int n = node.getChildCount();
+
+        for(int i = 0; i < n && this.shouldVisitNextChild(node, result); ++i) {
+            ParseTree c = node.getChild(i);
+            Value childResult = null;
+            try {
+                if (beforeVisit != null)
+                    beforeVisit.call();
+                childResult = c.accept(this);
+                if (afterVisit != null)
+                    afterVisit.call();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            result = this.aggregateResult(result, childResult);
+        }
+
+        return result;
     }
 
     /**
@@ -75,7 +108,12 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         symbolTableStack.addValue("putf", Function.create(true, module, Type.voidType(), "putf" /*TODO varargs*/));
         symbolTableStack.addValue("_sysy_starttime", Function.create(true, module, Type.voidType(), "_sysy_starttime", Arg.create(0, Type.i32(), "lineno")));
         symbolTableStack.addValue("_sysy_stoptime", Function.create(true, module, Type.voidType(), "_sysy_stoptime", Arg.create(0, Type.i32(), "lineno")));
-        return super.visitCompUnit(ctx);
+        Value result = visitChildrenCallBack(ctx, () -> {
+            this.visitCtx.isGlobal = true;
+            return null;
+        }, null);
+        symbolTableStack.exitScope();
+        return result;
     }
 
     /**
@@ -155,7 +193,9 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
     public Value visitVarDef(SysYParser.VarDefContext ctx) {
         if(this.symbolTableStack.findValueCurrentScope(ctx.Identifier().getText()) != null){
             //重定义error
+            return null;
         }
+        Value retVal = null;
         Type bType = this.visitCtx.bType;
         Value initVal = null;
         if(this.visitCtx.isGlobal) { //全局
@@ -170,6 +210,40 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                     Value v = visit(constExprContext);
                     if(v == null){
                         //数组维度非常数error
+                        return null;
+                    } else if(!(v instanceof ConstInt)){
+                        //数组维度非整数error
+                        return null;
+                    } else{
+                        dims.add(((ConstInt) v).value);
+                    }
+                }
+                for(int i = dims.size() - 1; i >= 0; i--){
+                    bType = Type.arrayType(bType, dims.get(i));
+                }
+                if(ctx.ASSIGN() != null)
+                    initVal = visit(ctx.initVal());
+                else{
+                    if(this.visitCtx.bType.equals(Type.i32()))
+                        initVal = ConstArray.create(ConstInt.create(0), dims);
+                    else
+                        initVal = ConstArray.create(ConstFloat.create(0), dims);
+                }
+            }
+            retVal = GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", false, initVal);
+            this.symbolTableStack.addValue(ctx.Identifier().getText(), retVal);
+        } else { //局部
+            if(ctx.LB().size() == 0) { //局部变量
+                if(ctx.ASSIGN() != null)
+                    initVal = visit(ctx.initVal());
+                else
+                    initVal = null;
+            } else { //局部数组
+                List<Integer> dims = new ArrayList<>(ctx.constExpr().size());
+                for (SysYParser.ConstExprContext constExprContext : ctx.constExpr()) {
+                    Value v = visit(constExprContext);
+                    if(v == null){
+                        //数组维度非常数error
                     } else if(!(v instanceof ConstInt)){
                         //数组维度非整数error
                     } else{
@@ -179,19 +253,17 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                 for(int i = dims.size() - 1; i >= 0; i--){
                     bType = Type.arrayType(bType, dims.get(i));
                 }
-                initVal = visit(ctx.initVal());
-
+                if(ctx.ASSIGN() != null)
+                    initVal = visit(ctx.initVal());
+                else
+                    initVal = null;
             }
-            GlobalVariable globalVariable = GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", false, initVal);
-            this.symbolTableStack.addValue(ctx.Identifier().getText(), globalVariable);
-        } else { //局部
-            if(ctx.LB().size() == 0) { //局部变量
-
-            } else { //局部数组
-
-            }
+            retVal = AllocaInst.create(basicBlock, ctx.Identifier().getText() + ".addr", bType);
+            if(initVal != null)
+                StoreInst.create(basicBlock, initVal, retVal);
+            symbolTableStack.addValue(ctx.Identifier().getText(), retVal);
         }
-        return super.visitVarDef(ctx);
+        return retVal;
     }
 
     /**
@@ -212,8 +284,24 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitFuncDef(SysYParser.FuncDefContext ctx) {
-
-        return super.visitFuncDef(ctx);
+        this.visitCtx.phase = VisitCtx.Phase.Function;
+        if(symbolTableStack.findValueCurrentScope(ctx.Identifier().getText()) != null){
+            //重定义error
+            return null;
+        }
+        visit(ctx.funcType());
+        Type retType = this.visitCtx.retType;
+        String funcName = ctx.Identifier().getText();
+        visit(ctx.funcFParams());
+        List<Arg> args = this.visitCtx.args;
+        Function function = Function.create(false, module, retType, funcName, args);
+        symbolTableStack.addValue(funcName, function);
+        this.visitCtx.isGlobal = false;
+        this.visitCtx.function = function;
+        symbolTableStack.enterScope();
+        visit(ctx.block());
+        symbolTableStack.exitScope();
+        return function;
     }
 
     /**
@@ -223,6 +311,12 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitFuncType(SysYParser.FuncTypeContext ctx) {
+        if(ctx.INT() != null)
+            this.visitCtx.retType = Type.i32();
+        else if(ctx.VOID() != null)
+            this.visitCtx.retType = Type.voidType();
+        else if(ctx.FLOAT() != null)
+            this.visitCtx.retType = Type.f32();
         return super.visitFuncType(ctx);
     }
 
@@ -233,7 +327,14 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitFuncFParams(SysYParser.FuncFParamsContext ctx) {
-        return super.visitFuncFParams(ctx);
+        List<Arg> args = new ArrayList<>(ctx.funcFParam().size());
+        for(int i = 0; i < ctx.funcFParam().size(); i++){
+            Arg funcFParam = (Arg) visit(ctx.funcFParam(i));
+            funcFParam.setPos(i);
+            args.add(funcFParam);
+        }
+        this.visitCtx.args = args;
+        return null;
     }
 
     /**
@@ -243,7 +344,14 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitFuncFParam(SysYParser.FuncFParamContext ctx) {
-        return super.visitFuncFParam(ctx);
+        Arg funcFParam = null;
+        visit(ctx.bType());
+        Type bType = this.visitCtx.bType;
+        String name = ctx.Identifier().getText();
+        Type type = null;
+        //TODO from (LB RB (LB expr RB)*) to type
+        funcFParam = Arg.create(-1, type, ctx.Identifier().getText());
+        return funcFParam;
     }
 
     /**
@@ -253,7 +361,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitBlock(SysYParser.BlockContext ctx) {
-        return super.visitBlock(ctx);
+        return visitChildrenCallBack(ctx, null, null);
     }
 
     /**
@@ -280,7 +388,24 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitStmt(SysYParser.StmtContext ctx) {
-        return super.visitStmt(ctx);
+        if(ctx.ASSIGN() != null) { // 赋值语句
+
+        } else if(ctx.block() != null) {
+
+        } else if(ctx.IF() != null) {
+
+        } else if(ctx.WHILE() != null) {
+
+        } else if(ctx.BREAK() != null) {
+
+        } else if(ctx.CONTINUE() != null) {
+
+        } else if(ctx.RETURN() != null) {
+
+        } else {
+
+        }
+        return null;
     }
     /**
      * expr

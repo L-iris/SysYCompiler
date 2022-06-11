@@ -22,4 +22,9 @@ public class Arg extends Value implements Comparable<Arg>{
     public int compareTo(Arg o) {
         return this.pos - o.pos;
     }
+
+    public boolean setPos(int i) {
+        this.pos = i;
+        return true;
+    }
 }

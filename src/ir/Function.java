@@ -6,10 +6,7 @@ import util.ir.IList;
 import util.ir.IListNode;
 
 import javax.lang.model.element.TypeElement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 public class Function extends Constant implements IListNode<Function,Module>, Iterable<BasicBlock> {
 
@@ -66,24 +63,32 @@ public class Function extends Constant implements IListNode<Function,Module>, It
         return function;
     }
 
-    public static Function create(boolean isBuiltin, Module parent, Function insertBefore, Type retType, String name, Arg... args) {
+    public static Function create(boolean isBuiltin, Module parent, Function insertBefore, Type retType, String name, List<Arg> args) {
         FunctionType functionType;
-        if(args.length != 0) {
-            Type[] paramsType = new Type[args.length];
-            Arrays.sort(args);
-            for (int i = 0; i < args.length; i++) {
-                paramsType[i] = args[i].getType();
+        if(args.size() != 0) {
+            Type[] paramsType = new Type[args.size()];
+            args.sort(Comparator.comparingInt(Arg::getPos));
+            for (int i = 0; i < args.size(); i++) {
+                paramsType[i] = args.get(i).getType();
             }
             functionType = Type.functionType(retType, paramsType);
         } else {
             functionType = Type.functionType(retType);
         }
-        Function function = new Function(functionType, name, List.of(args), isBuiltin, parent);
+        Function function = new Function(functionType, name, args, isBuiltin, parent);
         if(insertBefore == null)
             function.parent.functions.insertAtEnd(function);
         else
             function.parent.functions.insertBefore(function, insertBefore);
         return function;
+    }
+
+    public static Function create(boolean isBuiltin, Module parent, Type retType, String name, List<Arg> args) {
+        return create(isBuiltin, parent, null, retType, name, args);
+    }
+
+    public static Function create(boolean isBuiltin, Module parent, Function insertBefore, Type retType, String name, Arg... args) {
+        return create(isBuiltin, parent, insertBefore, retType, name, List.of(args));
     }
 
     public static Function create(boolean isBuiltin, Module parent, Type retType, String name, Arg... args) {
