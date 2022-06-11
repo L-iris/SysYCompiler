@@ -10,4 +10,8 @@ public class ConstFloat extends Value {
         super(Type.f32());
         this.value = value;
     }
+
+    public static ConstFloat create(float v) {
+        return new ConstFloat(v);
+    }
 }

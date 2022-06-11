@@ -4,7 +4,6 @@ import ir.*;
 import ir.Module;
 import ir.constval.ConstFloat;
 import ir.constval.ConstInt;
-import ir.instructions.AllocaInst;
 import ir.instructions.BinaryInst;
 import ir.instructions.Instruction;
 import ir.types.Type;
@@ -29,24 +28,25 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         Type type;
         boolean isConst;
         boolean isGlobal;
+        boolean isConstExpr;
     }
 
     public SymbolTableStack symbolTableStack;
     public Module module;
     private Function function;
     private BasicBlock basicBlock;
-    private VisitCtx visitCtx = new VisitCtx();
+    private final VisitCtx visitCtx;
 
     public SysYVisitorImpl(Module module) {
         this.symbolTableStack = new SymbolTableStack();
         this.module = module;
+        this.visitCtx = new VisitCtx();
     }
 
     /**
      * program
      *     : compUnit
      *     ;
-     * @return
      */
     @Override
     public Value visitProgram(SysYParser.ProgramContext ctx) {
@@ -57,7 +57,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * compUnit
      *     : (funcDef|decl)+
      *     ;
-     * @return
      */
     @Override
     public Value visitCompUnit(SysYParser.CompUnitContext ctx) {
@@ -66,6 +65,16 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         symbolTableStack.addValue("getint", Function.create(true, module, Type.i32(), "getint"));
         symbolTableStack.addValue("getch", Function.create(true, module, Type.i32(), "getch"));
         symbolTableStack.addValue("getarray", Function.create(true, module, Type.i32(), "getarray", Arg.create(0, Type.arrayType(Type.i32()), "a")));
+        symbolTableStack.addValue("getfloat", Function.create(true, module, Type.f32(), "getfloat"));
+        symbolTableStack.addValue("getfarray", Function.create(true, module, Type.i32(), "getfarray", Arg.create(0, Type.arrayType(Type.f32()), "a")));
+        symbolTableStack.addValue("putint", Function.create(true, module, Type.voidType(), "putint", Arg.create(0, Type.i32(), "a")));
+        symbolTableStack.addValue("putch", Function.create(true, module, Type.voidType(), "getch", Arg.create(0, Type.i32(), "a")));
+        symbolTableStack.addValue("putarray", Function.create(true, module, Type.voidType(), "putarray", Arg.create(0, Type.i32(), "n"), Arg.create(1, Type.arrayType(Type.i32()), "a")));
+        symbolTableStack.addValue("putfloat", Function.create(true, module, Type.voidType(), "putfloat", Arg.create(0, Type.f32(), "a")));
+        symbolTableStack.addValue("putfarray", Function.create(true, module, Type.voidType(), "putfarray", Arg.create(0, Type.i32(), "n"), Arg.create(1, Type.arrayType(Type.f32()), "a")));
+        symbolTableStack.addValue("putf", Function.create(true, module, Type.voidType(), "putf" /*TODO varargs*/));
+        symbolTableStack.addValue("_sysy_starttime", Function.create(true, module, Type.voidType(), "_sysy_starttime", Arg.create(0, Type.i32(), "lineno")));
+        symbolTableStack.addValue("_sysy_stoptime", Function.create(true, module, Type.voidType(), "_sysy_stoptime", Arg.create(0, Type.i32(), "lineno")));
         return super.visitCompUnit(ctx);
     }
 
@@ -74,7 +83,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      *     : constDecl
      *     | varDecl
      *     ;
-     * @return
      */
     @Override
     public Value visitDecl(SysYParser.DeclContext ctx) {
@@ -85,8 +93,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * constDecl
      *     : CONST bType constDef (COMMA constDef)* SEMICOLON
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitConstDecl(SysYParser.ConstDeclContext ctx) {
@@ -98,8 +104,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * bType
      *     :INT | FLOAT
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitBType(SysYParser.BTypeContext ctx) {
@@ -114,8 +118,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * constDef
      *     :Identifier (LB constExpr RB)* ASSIGN constInitVal
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitConstDef(SysYParser.ConstDefContext ctx) {
@@ -127,8 +129,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      *     :constExpr
      *     |(LC (constInitVal (COMMA constInitVal)*)? RC)
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitConstInitVal(SysYParser.ConstInitValContext ctx) {
@@ -139,11 +139,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * varDecl
      *     :bType varDef (COMMA varDef)* SEMICOLON
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitVarDecl(SysYParser.VarDeclContext ctx) {
+        this.visitCtx.isConst = false;
         return super.visitVarDecl(ctx);
     }
 
@@ -151,8 +150,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * varDef
      *     :Identifier (LB constExpr RB)* (ASSIGN initVal)?
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitVarDef(SysYParser.VarDefContext ctx) {
@@ -163,7 +160,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         Value initVal = null;
         if(this.visitCtx.isGlobal) { //全局
             if (ctx.LB().size() == 0) { //全局变量
-                initVal = visit(ctx.initVal());
+                if(ctx.ASSIGN() != null)
+                    initVal = visit(ctx.initVal());
+                else
+                    initVal = ConstInt.create(0);
             } else { //全局数组
                 List<Integer> dims = new ArrayList<>(ctx.constExpr().size());
                 for (SysYParser.ConstExprContext constExprContext : ctx.constExpr()) {
@@ -186,11 +186,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             this.symbolTableStack.addValue(ctx.Identifier().getText(), globalVariable);
         } else { //局部
             if(ctx.LB().size() == 0) { //局部变量
-                initVal = visit(ctx.initVal());
+
             } else { //局部数组
 
             }
-            AllocaInst.create(basicBlock, null, bType);
         }
         return super.visitVarDef(ctx);
     }
@@ -200,8 +199,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      *     :expr
      *     |(LC (initVal (COMMA initVal)*)? RC)
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitInitVal(SysYParser.InitValContext ctx) {
@@ -212,8 +209,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * funcDef
      *     :funcType Identifier LP (funcFParams)? RP block
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitFuncDef(SysYParser.FuncDefContext ctx) {
@@ -225,18 +220,9 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * funcType
      *     :INT|VOID|FLOAT
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitFuncType(SysYParser.FuncTypeContext ctx) {
-        if(ctx.INT() != null) {
-            this.visitCtx.bType = Type.i32();
-        } else if(ctx.FLOAT() != null){
-            this.visitCtx.bType = Type.f32();
-        } else if(ctx.VOID() != null){
-            this.visitCtx.bType = Type.voidType();
-        }
         return super.visitFuncType(ctx);
     }
 
@@ -244,8 +230,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * funcFParams
      *     :funcFParam (COMMA funcFParam)*
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitFuncFParams(SysYParser.FuncFParamsContext ctx) {
@@ -256,8 +240,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * funcFParam
      *     :bType Identifier (LB RB (LB expr RB)*)?
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitFuncFParam(SysYParser.FuncFParamContext ctx) {
@@ -268,8 +250,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * block
      *     :LC blockItem* RC
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitBlock(SysYParser.BlockContext ctx) {
@@ -280,8 +260,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * blockItem
      *     :decl|stmt
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitBlockItem(SysYParser.BlockItemContext ctx) {
@@ -299,20 +277,15 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      *     |(CONTINUE SEMICOLON)
      *     |(RETURN expr? SEMICOLON)
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitStmt(SysYParser.StmtContext ctx) {
         return super.visitStmt(ctx);
     }
-    Value exprValue;
     /**
      * expr
      *     :addExpr
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitExpr(SysYParser.ExprContext ctx) {
@@ -324,8 +297,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * cond
      *     :lOrExpr
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitCond(SysYParser.CondContext ctx) {
@@ -336,8 +307,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * lVal
      *     :Identifier (LB expr RB)*
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitLVal(SysYParser.LValContext ctx) {
@@ -350,8 +319,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      *     |lVal
      *     |number
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitPrimaryExpr(SysYParser.PrimaryExprContext ctx) {
@@ -363,8 +330,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      *     :IntConst
      *     |FloatConst
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitNumber(SysYParser.NumberContext ctx) {
@@ -377,8 +342,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      *     |(Identifier LP (funcRParams)? RP)
      *     |(unaryOp unaryExpr)
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitUnaryExpr(SysYParser.UnaryExprContext ctx) {
@@ -389,8 +352,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * unaryOp
      *     :ADD|MINUS|NOT
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitUnaryOp(SysYParser.UnaryOpContext ctx) {
@@ -401,8 +362,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * funcRParams
      *     :expr (COMMA expr)*
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitFuncRParams(SysYParser.FuncRParamsContext ctx) {
@@ -413,8 +372,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * mulExpr
      *     :unaryExpr ((MUL|DIV|MOD) unaryExpr)*
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitMulExpr(SysYParser.MulExprContext ctx) {
@@ -425,8 +382,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * addExpr
      *     :mulExpr ((ADD|MINUS) mulExpr)*
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitAddExpr(SysYParser.AddExprContext ctx) {
@@ -492,8 +447,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * relExpr
      *     :addExpr ((LT|GT|LE|GE) addExpr)*
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitRelExpr(SysYParser.RelExprContext ctx) {
@@ -504,8 +457,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * eqExpr
      *     :relExpr ((EQ|NE) relExpr)*
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitEqExpr(SysYParser.EqExprContext ctx) {
@@ -516,8 +467,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * lAndExpr
      *     :eqExpr (AND lAndExpr)*
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitLAndExpr(SysYParser.LAndExprContext ctx) {
@@ -528,8 +477,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * lOrExpr
      *     :lAndExpr (OR lAndExpr)*
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitLOrExpr(SysYParser.LOrExprContext ctx) {
@@ -540,11 +487,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      * constExpr
      *     :addExpr
      *     ;
-     * @param ctx
-     * @return
      */
     @Override
     public Value visitConstExpr(SysYParser.ConstExprContext ctx) {
+        this.visitCtx.isConstExpr = true;
         return super.visitConstExpr(ctx);
     }
 }
