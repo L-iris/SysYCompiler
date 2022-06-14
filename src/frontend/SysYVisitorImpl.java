@@ -353,7 +353,15 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitInitVal(SysYParser.InitValContext ctx) {
-        return super.visitInitVal(ctx);
+        if(ctx.expr()!=null){
+            return  visit(ctx.expr());
+        }else{
+            List<Value> valueList=new ArrayList<>();
+            ctx.initVal().forEach(context->{
+                valueList.add(visit(context));
+            });
+            return new ConstArray(valueList);
+        }
     }
 
     /**
