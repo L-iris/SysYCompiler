@@ -5,10 +5,7 @@ import ir.Module;
 import ir.constval.ConstArray;
 import ir.constval.ConstFloat;
 import ir.constval.ConstInt;
-import ir.instructions.AllocaInst;
-import ir.instructions.BinaryInst;
-import ir.instructions.Instruction;
-import ir.instructions.StoreInst;
+import ir.instructions.*;
 import ir.types.Type;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.RuleNode;
@@ -17,6 +14,7 @@ import util.frontend.SysYBaseVisitor;
 import util.frontend.SysYParser;
 
 import javax.security.auth.callback.Callback;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -397,18 +395,57 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
     @Override
     public Value visitStmt(SysYParser.StmtContext ctx) {
         if(ctx.ASSIGN() != null) { // 赋值语句
-
+            //visit(ctx.lVal());
+            //visit(ctx.expr());
+            return StoreInst.create(this.basicBlock,visit(ctx.lVal()),visit(ctx.expr()));
         } else if(ctx.block() != null) {
+            List<Value> list=new ArrayList<>();
+            ctx.block().blockItem().forEach(blockItemContext -> {
+                list.add(visit(blockItemContext));
+            });
+            return new ConstArray(list);
 
         } else if(ctx.IF() != null) {
+            BasicBlock trueBlock= new BasicBlock(this.function,"_THEN");
+
+            BasicBlock nextBlock= new BasicBlock(this.function,"_NEXTBlock");
+            BasicBlock falseBlock= ctx.ELSE() == null? nextBlock :
+                    new BasicBlock(this.function,this.basicBlock.getName()+"_ELSE");
+            boolean ifIFEndWithRet=false;
+            ctx.cond().falseblock=falseBlock;
+            ctx.cond().trueblock=trueBlock;
+
+            visit(ctx.cond());
+
+            this.basicBlock=trueBlock;
+            visit(ctx.stmt(0));
+
+            BrInst brInst_true=BrInst.create(this.basicBlock,nextBlock);
+
+            if(ctx.ELSE()!=null){
+                this.basicBlock=falseBlock;
+                visitStmt(ctx.stmt(1));
+                BrInst brInst_false=BrInst.create(this.basicBlock,nextBlock);
+
+            }
+            this.basicBlock=nextBlock;
+            return brInst_true;
 
         } else if(ctx.WHILE() != null) {
 
         } else if(ctx.BREAK() != null) {
-
+            return BrInst.create(this.basicBlock,new BasicBlock(this.function,"_BREAK"));
         } else if(ctx.CONTINUE() != null) {
-
+            return BrInst.create(this.basicBlock,new BasicBlock(this.function,"_CONTINUE"));
         } else if(ctx.RETURN() != null) {
+            if(ctx.expr()!=null){
+                //visit(ctx.expr());
+                return RetInst.create(this.basicBlock,visit(ctx.expr()));
+            }
+            else{
+                //return;
+                return RetInst.create(this.basicBlock);
+            }
 
         } else {
 
@@ -433,6 +470,8 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitCond(SysYParser.CondContext ctx) {
+
+
         return super.visitCond(ctx);
     }
 
