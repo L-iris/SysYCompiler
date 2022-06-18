@@ -36,9 +36,19 @@ public class BasicBlock extends Value implements IListNode<BasicBlock,Function>,
         super(Type.labelType());
     }
 
-    public BasicBlock(Function parent) {
-        super(Type.labelType());
+    public BasicBlock(String name, Function parent) {
+        super(Type.labelType(), name);
         this.parent = parent;
+    }
+
+    public static BasicBlock create(Function parent, BasicBlock insertBefore, String name) {
+        BasicBlock basicBlock = new BasicBlock(name, parent);
+        basicBlock.parent.basicBlockIlist.insertBefore(basicBlock, insertBefore);
+        return basicBlock;
+    }
+
+    public static BasicBlock create(Function parent, String name) {
+        return create(parent, null, name);
     }
 
     @Override

@@ -23,6 +23,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
     private static class VisitCtx {
         public Type retType;
         public Function function;
+        public BasicBlock basicBlock;
 
         enum Phase {
             GlobalVariable,
@@ -41,8 +42,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
 
     public SymbolTableStack symbolTableStack;
     public Module module;
-    private Function function;
-    private BasicBlock basicBlock;
     private final VisitCtx visitCtx;
 
     public SysYVisitorImpl(Module module) {
@@ -255,9 +254,9 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                 else
                     initVal = null;
             }
-            retVal = AllocaInst.create(basicBlock, ctx.Identifier().getText() + ".addr", bType);
+            retVal = AllocaInst.create(this.visitCtx.basicBlock, ctx.Identifier().getText() + ".addr", bType);
             if(initVal != null)
-                StoreInst.create(basicBlock, initVal, retVal);
+                StoreInst.create(this.visitCtx.basicBlock, initVal, retVal);
             symbolTableStack.addValue(ctx.Identifier().getText(), retVal);
         }
         return retVal;
@@ -298,6 +297,8 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         symbolTableStack.enterScope();
         visit(ctx.block());
         symbolTableStack.exitScope();
+        this.visitCtx.function = null;
+        this.visitCtx.isGlobal = true;
         return function;
     }
 
@@ -358,6 +359,17 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitBlock(SysYParser.BlockContext ctx) {
+        if(this.visitCtx.args != null) {
+            BasicBlock basicBlock = BasicBlock.create(this.visitCtx.function, null);
+            this.visitCtx.basicBlock = basicBlock;
+            this.visitCtx.function.basicBlockIlist.insertAtEnd(basicBlock);
+            for(var arg : this.visitCtx.args){
+                basicBlock.instructionIList.insertAtEnd(AllocaInst.create(basicBlock, null, arg.getType()));
+            }
+            this.visitCtx.args = null;
+        } else {
+
+        }
         return visitChildrenCallBack(ctx, null, null);
     }
 
@@ -501,16 +513,16 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                 }
                 if(ctx.unaryOp().MINUS() != null){
                     if(operand.getType().getTypeID() == Type.TypeID.IntegerTyID){
-                        return BinaryInst.create(basicBlock, Type.i32(), null, Instruction.InstType.SUB, ConstInt.create(0), operand);
+                        return BinaryInst.create(this.visitCtx.basicBlock, Type.i32(), null, Instruction.InstType.SUB, ConstInt.create(0), operand);
                     }else{
-                        return BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FSUB, ConstFloat.create(0), operand);
+                        return BinaryInst.create(this.visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FSUB, ConstFloat.create(0), operand);
                     }
                 }
                 if(ctx.unaryOp().NOT() != null){
                     if(operand.getType().getTypeID() == Type.TypeID.IntegerTyID){
-                        return CmpInst.create(basicBlock, null, Instruction.InstType.ICMPEQ, ConstInt.create(0), operand);
+                        return CmpInst.create(this.visitCtx.basicBlock, null, Instruction.InstType.ICMPEQ, ConstInt.create(0), operand);
                     }else{
-                        return CmpInst.create(basicBlock, null, Instruction.InstType.FCMPEQ, ConstFloat.create(0), operand);
+                        return CmpInst.create(this.visitCtx.basicBlock, null, Instruction.InstType.FCMPEQ, ConstFloat.create(0), operand);
                     }
                 }
             }
@@ -565,36 +577,36 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                     operand1=constMOD(operand1,operand2);
             } else if(operand1.getType().getTypeID() == Type.TypeID.IntegerTyID & operand2.getType().getTypeID() == Type.TypeID.IntegerTyID) {
                 if(ctx.getChild(2 * i - 1).getText().equals("*"))
-                    operand1 = BinaryInst.create(basicBlock, Type.i32(), null, Instruction.InstType.MUL, operand1, operand2);
+                    operand1 = BinaryInst.create(visitCtx.basicBlock, Type.i32(), null, Instruction.InstType.MUL, operand1, operand2);
                 else if(ctx.getChild(2*i-1).getText().equals("/"))
-                    operand1 = BinaryInst.create(basicBlock, Type.i32(), null, Instruction.InstType.SDIV, operand1, operand2);
+                    operand1 = BinaryInst.create(visitCtx.basicBlock, Type.i32(), null, Instruction.InstType.SDIV, operand1, operand2);
                 else if(ctx.getChild(2*i-1).getText().equals("%"))
-                    operand1 = BinaryInst.create(basicBlock, Type.i32(), null, Instruction.InstType.SREM, operand1, operand2);
+                    operand1 = BinaryInst.create(visitCtx.basicBlock, Type.i32(), null, Instruction.InstType.SREM, operand1, operand2);
             } else {
                 //TODO
                 if(operand1.getType().getTypeID() == Type.TypeID.IntegerTyID) {
-                    operand1 = ConvertInst.create(basicBlock, null, null, Instruction.InstType.SITOFP, operand1, Type.f32());
+                    operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.SITOFP, operand1, Type.f32());
                     if (ctx.getChild(2 * i - 1).getText().equals("*"))
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FMUL, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FMUL, operand1, operand2);
                     else if(ctx.getChild(2*i-1).getText().equals("/"))
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FDIV, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FDIV, operand1, operand2);
                     else if(ctx.getChild(2*i-1).getText().equals("%"))
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.SREM, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.SREM, operand1, operand2);
                 }else if(operand2.getType().getTypeID() == Type.TypeID.IntegerTyID){
-                    operand2 = ConvertInst.create(basicBlock, null, null, Instruction.InstType.SITOFP, operand2, Type.f32());
+                    operand2 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.SITOFP, operand2, Type.f32());
                     if (ctx.getChild(2 * i - 1).getText().equals("*"))
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FMUL, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FMUL, operand1, operand2);
                     else if(ctx.getChild(2*i-1).getText().equals("/"))
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FDIV, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FDIV, operand1, operand2);
                     else if(ctx.getChild(2*i-1).getText().equals("%"))
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.SREM, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.SREM, operand1, operand2);
                 }else{
                     if (ctx.getChild(2 * i - 1).getText().equals("*"))
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FMUL, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FMUL, operand1, operand2);
                     else if(ctx.getChild(2*i-1).getText().equals("/"))
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FDIV, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FDIV, operand1, operand2);
                     else if(ctx.getChild(2*i-1).getText().equals("%"))
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.SREM, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.SREM, operand1, operand2);
                 }
             }
         }
@@ -668,28 +680,28 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                     operand1 = constMinus(operand1, operand2);
             } else if(operand1.getType().getTypeID() == Type.TypeID.IntegerTyID & operand2.getType().getTypeID() == Type.TypeID.IntegerTyID) {
                 if(ctx.getChild(2 * i - 1).getText().equals("+"))
-                    operand1 = BinaryInst.create(basicBlock, Type.i32(), null, Instruction.InstType.ADD, operand1, operand2);
+                    operand1 = BinaryInst.create(visitCtx.basicBlock, Type.i32(), null, Instruction.InstType.ADD, operand1, operand2);
                 else
-                    operand1 = BinaryInst.create(basicBlock, Type.i32(), null, Instruction.InstType.SUB, operand1, operand2);
+                    operand1 = BinaryInst.create(visitCtx.basicBlock, Type.i32(), null, Instruction.InstType.SUB, operand1, operand2);
             } else {
                 //TODO
                 if(operand1.getType().getTypeID() == Type.TypeID.IntegerTyID) {
-                    operand1 = ConvertInst.create(basicBlock, null, null, Instruction.InstType.SITOFP, operand1, Type.f32());
+                    operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.SITOFP, operand1, Type.f32());
                     if (ctx.getChild(2 * i - 1).getText().equals("+"))
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FADD, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FADD, operand1, operand2);
                     else
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FSUB, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FSUB, operand1, operand2);
                 }else if(operand2.getType().getTypeID() == Type.TypeID.IntegerTyID){
-                    operand2 = ConvertInst.create(basicBlock, null, null, Instruction.InstType.SITOFP, operand2, Type.f32());
+                    operand2 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.SITOFP, operand2, Type.f32());
                     if (ctx.getChild(2 * i - 1).getText().equals("+"))
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FADD, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FADD, operand1, operand2);
                     else
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FSUB, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FSUB, operand1, operand2);
                 }else{
                     if (ctx.getChild(2 * i - 1).getText().equals("+"))
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FADD, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FADD, operand1, operand2);
                     else
-                        operand1 = BinaryInst.create(basicBlock, Type.f32(), null, Instruction.InstType.FSUB, operand1, operand2);
+                        operand1 = BinaryInst.create(visitCtx.basicBlock, Type.f32(), null, Instruction.InstType.FSUB, operand1, operand2);
                 }
             }
         }
@@ -756,7 +768,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
 
     /**
      * lAndExpr
-     *     :eqExpr (AND lAndExpr)*
+     *     :eqExpr (AND eqExpr)*
      *     ;
      */
     @Override

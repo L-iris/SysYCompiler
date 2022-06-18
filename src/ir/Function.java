@@ -67,7 +67,7 @@ public class Function extends Constant implements IListNode<Function,Module>, It
         FunctionType functionType;
         if(args.size() != 0) {
             Type[] paramsType = new Type[args.size()];
-            args.sort(Comparator.comparingInt(Arg::getPos));
+            //args.sort(Comparator.comparingInt(Arg::getPos));
             for (int i = 0; i < args.size(); i++) {
                 paramsType[i] = args.get(i).getType();
             }

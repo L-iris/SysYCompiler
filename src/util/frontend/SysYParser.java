@@ -2139,18 +2139,15 @@ public class SysYParser extends Parser {
 	}
 
 	public static class LAndExprContext extends ParserRuleContext {
-		public EqExprContext eqExpr() {
-			return getRuleContext(EqExprContext.class,0);
+		public List<EqExprContext> eqExpr() {
+			return getRuleContexts(EqExprContext.class);
+		}
+		public EqExprContext eqExpr(int i) {
+			return getRuleContext(EqExprContext.class,i);
 		}
 		public List<TerminalNode> AND() { return getTokens(SysYParser.AND); }
 		public TerminalNode AND(int i) {
 			return getToken(SysYParser.AND, i);
-		}
-		public List<LAndExprContext> lAndExpr() {
-			return getRuleContexts(LAndExprContext.class);
-		}
-		public LAndExprContext lAndExpr(int i) {
-			return getRuleContext(LAndExprContext.class,i);
 		}
 		public LAndExprContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
@@ -2166,29 +2163,27 @@ public class SysYParser extends Parser {
 	public final LAndExprContext lAndExpr() throws RecognitionException {
 		LAndExprContext _localctx = new LAndExprContext(_ctx, getState());
 		enterRule(_localctx, 58, RULE_lAndExpr);
+		int _la;
 		try {
-			int _alt;
 			enterOuterAlt(_localctx, 1);
 			{
 			setState(319);
 			eqExpr();
 			setState(324);
 			_errHandler.sync(this);
-			_alt = getInterpreter().adaptivePredict(_input,33,_ctx);
-			while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER ) {
-				if ( _alt==1 ) {
-					{
-					{
-					setState(320);
-					match(AND);
-					setState(321);
-					lAndExpr();
-					}
-					} 
+			_la = _input.LA(1);
+			while (_la==AND) {
+				{
+				{
+				setState(320);
+				match(AND);
+				setState(321);
+				eqExpr();
+				}
 				}
 				setState(326);
 				_errHandler.sync(this);
-				_alt = getInterpreter().adaptivePredict(_input,33,_ctx);
+				_la = _input.LA(1);
 			}
 			}
 		}
@@ -2502,7 +2497,7 @@ public class SysYParser extends Parser {
 		"\u0000\u0000\u0000\u013c\u013a\u0001\u0000\u0000\u0000\u013c\u013d\u0001"+
 		"\u0000\u0000\u0000\u013d9\u0001\u0000\u0000\u0000\u013e\u013c\u0001\u0000"+
 		"\u0000\u0000\u013f\u0144\u00038\u001c\u0000\u0140\u0141\u0005\"\u0000"+
-		"\u0000\u0141\u0143\u0003:\u001d\u0000\u0142\u0140\u0001\u0000\u0000\u0000"+
+		"\u0000\u0141\u0143\u00038\u001c\u0000\u0142\u0140\u0001\u0000\u0000\u0000"+
 		"\u0143\u0146\u0001\u0000\u0000\u0000\u0144\u0142\u0001\u0000\u0000\u0000"+
 		"\u0144\u0145\u0001\u0000\u0000\u0000\u0145;\u0001\u0000\u0000\u0000\u0146"+
 		"\u0144\u0001\u0000\u0000\u0000\u0147\u014c\u0003:\u001d\u0000\u0148\u0149"+
