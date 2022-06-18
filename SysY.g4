@@ -132,7 +132,7 @@ eqExpr
     ;
 
 lAndExpr
-    :eqExpr (AND lAndExpr)*
+    :eqExpr (AND eqExpr)*
     ;
 
 lOrExpr
