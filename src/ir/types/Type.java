@@ -65,4 +65,12 @@ public class Type {
     public static FunctionType functionType(Type retType) {
         return new FunctionType(retType, new ArrayList<>(0));
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof Type){
+            return this.typeID == ((Type) obj).typeID;
+        }
+        return false;
+    }
 }

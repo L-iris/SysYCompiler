@@ -4,25 +4,30 @@ import ir.BasicBlock;
 import ir.Value;
 import ir.types.Type;
 
+import java.util.List;
+
 public class BinaryInst extends Instruction{
 
 
-    public BinaryInst(Type resultType, String resultName, InstType instType, Value userOperand1, Value userOperand2) {
-        super(resultType, resultName, instType, 2, userOperand1, userOperand2);
-        assert userOperand1.getType().equals(userOperand2.getType());
-        assert resultType.equals(userOperand1.getType());
+    public BinaryInst(BasicBlock parent, Instruction insertBefore, Type resultType, String resultName, InstType instType, int numUserOperands, Value... userOperands) {
+        super(parent, insertBefore, resultType, resultName, instType, numUserOperands, userOperands);
     }
 
     public static BinaryInst create(BasicBlock parent, Instruction insertBefore, Type resultType, String resultName, InstType instType, Value userOperand1, Value userOperand2) {
-        BinaryInst binaryInst = new BinaryInst(resultType, resultName, instType, userOperand1, userOperand2);
-        parent.instructionIList.insertBefore(binaryInst, insertBefore);
-        return binaryInst;
+        assert userOperand1.getTypeID() == userOperand2.getTypeID();
+        assert userOperand1.getTypeID() == resultType.getTypeID();
+        Value[] operands = new Value[2];
+        operands[0] = userOperand1;
+        operands[1] = userOperand2;
+        return new BinaryInst(parent, insertBefore, resultType, resultName, instType, operands.length, operands);
     }
 
     public static BinaryInst create(BasicBlock parent, Type resultType, String resultName, InstType instType, Value userOperand1, Value userOperand2) {
-        BinaryInst binaryInst = new BinaryInst(resultType, resultName, instType, userOperand1, userOperand2);
-        parent.instructionIList.insertAtEnd(binaryInst);
-        return binaryInst;
+        return create(parent, null, resultType, resultName, instType, userOperand1, userOperand2);
+    }
+
+    public static BinaryInst create(BasicBlock parent, String resultName, InstType instType, Value userOperand1, Value userOperand2) {
+        return create(parent, userOperand1.getType(), resultName, instType, userOperand1, userOperand2);
     }
 
     public Value getOperand1() {

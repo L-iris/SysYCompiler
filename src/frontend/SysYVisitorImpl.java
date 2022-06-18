@@ -13,7 +13,6 @@ import util.SymbolTableStack;
 import util.frontend.SysYBaseVisitor;
 import util.frontend.SysYParser;
 
-import javax.security.auth.callback.Callback;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -254,7 +253,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                 else
                     initVal = null;
             }
-            retVal = AllocaInst.create(this.visitCtx.basicBlock, ctx.Identifier().getText() + ".addr", bType);
+            retVal = AllocInst.create(this.visitCtx.basicBlock, ctx.Identifier().getText() + ".addr", bType);
             if(initVal != null)
                 StoreInst.create(this.visitCtx.basicBlock, initVal, retVal);
             symbolTableStack.addValue(ctx.Identifier().getText(), retVal);
@@ -364,7 +363,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             this.visitCtx.basicBlock = basicBlock;
             this.visitCtx.function.basicBlockIlist.insertAtEnd(basicBlock);
             for(var arg : this.visitCtx.args){
-                basicBlock.instructionIList.insertAtEnd(AllocaInst.create(basicBlock, null, arg.getType()));
+                basicBlock.instructionIList.insertAtEnd(AllocInst.create(basicBlock, null, arg.getType()));
             }
             this.visitCtx.args = null;
         } else {
@@ -763,6 +762,9 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitEqExpr(SysYParser.EqExprContext ctx) {
+        // visitRelExpr() -> Union[i1, i32, f32]
+        Value operand1 = visit(ctx.relExpr(0));
+
         return super.visitEqExpr(ctx);
     }
 

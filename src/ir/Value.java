@@ -36,6 +36,10 @@ public class Value {
         return type;
     }
 
+    public Type.TypeID getTypeID() {
+        return this.type.getTypeID();
+    }
+
     public List<Use> getUseList() {
         return useList;
     }

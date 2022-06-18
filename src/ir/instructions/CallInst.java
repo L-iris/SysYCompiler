@@ -15,14 +15,12 @@ public class CallInst extends Instruction{
         FunctionType functionType = func.getFunctionType();
         assert functionType.getNumOfParams() == params.length;
         for(int i=0;i< params.length;i++){
-            assert functionType.getParamType(i).equals(params[i]);
+            assert functionType.getParamType(i).equals(params[i].getType());
         }
 
         Value[] operands = new Value[params.length+1];
         operands[0] = func;
-        for(int i=0;i<params.length;i++){
-            operands[i+1] = params[i];
-        }
+        System.arraycopy(params, 0, operands, 1, params.length);
 
         return new CallInst(basicBlock, insertBefore, functionType.getRetType(), resultName, InstType.CALL, operands.length, operands);
     }
