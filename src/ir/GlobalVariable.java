@@ -1,5 +1,8 @@
 package ir;
 
+import ir.constval.ConstArray;
+import ir.constval.ConstFloat;
+import ir.constval.ConstInt;
 import ir.types.Type;
 import util.ir.IListNode;
 
@@ -21,19 +24,20 @@ public class GlobalVariable extends Constant implements IListNode<GlobalVariable
     }
 
     public static GlobalVariable create(Module parent, GlobalVariable insertBefore, Type resultType, String resultName, boolean isConst, Value userOperand){
+        if(resultType.getTypeID() == Type.TypeID.IntegerTyID){
+            assert userOperand instanceof ConstInt;
+        } else if(resultType.getTypeID() == Type.TypeID.FloatTyID){
+            assert userOperand instanceof ConstFloat;
+        } else if(resultType.getTypeID() == Type.TypeID.ArrayTyID){
+            assert userOperand instanceof ConstArray;
+        }
         GlobalVariable globalVariable = new GlobalVariable(resultType, resultName, isConst, userOperand);
         parent.globalVariables.insertBefore(globalVariable, insertBefore);
         return globalVariable;
     }
 
     public static GlobalVariable create(Module parent, Type resultType, String resultName, boolean isConst, Value userOperand){
-        GlobalVariable globalVariable = new GlobalVariable(resultType, resultName, isConst, userOperand);
-        parent.globalVariables.insertAtEnd(globalVariable);
-        return globalVariable;
-    }
-
-    public static GlobalVariable create() {
-        return new GlobalVariable(null, null, true, null);
+        return create(parent, null, resultType, resultName, isConst, userOperand);
     }
 
     public boolean isConst() {

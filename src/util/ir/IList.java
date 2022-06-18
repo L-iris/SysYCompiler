@@ -36,6 +36,8 @@ public class IList<V,P> implements Iterable<IListNode<V,P>> {
     }
 
     public boolean insertBefore(IListNode<V,P> node, IListNode<V,P> insertBefore) {
+        if(insertBefore == null)
+            return insertAtEnd(node);
         var i = this.first;
         while(i != null && !i.equals(insertBefore)){
             i = i.getNext();
