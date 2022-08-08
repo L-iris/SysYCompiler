@@ -26,5 +26,6 @@ public class Compiler {
 
         SysYVisitorImpl visitor = new SysYVisitorImpl(new Module());
         visitor.visit(tree);
+        System.out.println("here");
     }
 }

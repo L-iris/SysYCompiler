@@ -35,6 +35,7 @@ public class Function extends Constant implements IListNode<Function,Module>, It
     public Function(FunctionType functionType, String name, List<Arg> argList, boolean isBuiltin, Module parent) {
         super(functionType, name);
         this.argList = argList;
+        parent.functions.insertAtEnd(this);
         this.parent = parent;
         this.isBuiltin = isBuiltin;
     }

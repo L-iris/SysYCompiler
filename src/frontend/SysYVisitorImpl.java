@@ -1,8 +1,7 @@
 package frontend;
 
-import com.sun.security.auth.UnixNumericGroupPrincipal;
-import ir.*;
 import ir.Module;
+import ir.*;
 import ir.constval.ConstArray;
 import ir.constval.ConstFloat;
 import ir.constval.ConstInt;
@@ -15,11 +14,9 @@ import util.frontend.SysYBaseVisitor;
 import util.frontend.SysYLexer;
 import util.frontend.SysYParser;
 
-import javax.security.auth.callback.Callback;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -167,7 +164,80 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitConstDef(SysYParser.ConstDefContext ctx) {
-        return super.visitConstDef(ctx);
+        if(this.symbolTableStack.findValueCurrentScope(ctx.Identifier().getText()) != null){
+            //重定义error
+            return null;
+        }
+        Value retVal = null;
+        Type bType = this.visitCtx.bType;
+        Value initVal = null;
+        if(this.visitCtx.isGlobal) { //全局
+            if (ctx.LB().size() == 0) { //全局变量
+                if(ctx.ASSIGN() != null)
+                    initVal = visit(ctx.constInitVal());
+                else
+                    initVal = ConstInt.create(0);
+            } else { //全局数组
+                List<Integer> dims = new ArrayList<>(ctx.constExpr().size());
+                for (SysYParser.ConstExprContext constExprContext : ctx.constExpr()) {
+                    Value v = visit(constExprContext);
+                    if(v == null){
+                        //数组维度非常数error
+                        return null;
+                    } else if(!(v instanceof ConstInt)){
+                        //数组维度非整数error
+                        return null;
+                    } else{
+                        dims.add(((ConstInt) v).value);
+                    }
+                }
+                for(int i = dims.size() - 1; i >= 0; i--){
+                    bType = Type.arrayType(bType, dims.get(i));
+                }
+                if(ctx.ASSIGN() != null)
+                    initVal = visit(ctx.constInitVal());
+                else{
+                    if(this.visitCtx.bType.equals(Type.i32()))
+                        initVal = ConstArray.create(ConstInt.create(0), dims);
+                    else
+                        initVal = ConstArray.create(ConstFloat.create(0), dims);
+                }
+            }
+            retVal = GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", false, initVal);
+            this.symbolTableStack.addValue(ctx.Identifier().getText(), retVal);
+            this.module.globalVariables.insertAtEnd((GlobalVariable)retVal);
+        } else { //局部
+            if(ctx.LB().size() == 0) { //局部变量
+                if(ctx.ASSIGN() != null)
+                    initVal = visit(ctx.constInitVal());
+                else
+                    initVal = null;
+            } else { //局部数组
+                List<Integer> dims = new ArrayList<>(ctx.constExpr().size());
+                for (SysYParser.ConstExprContext constExprContext : ctx.constExpr()) {
+                    Value v = visit(constExprContext);
+                    if(v == null){
+                        //数组维度非常数error
+                    } else if(!(v instanceof ConstInt)){
+                        //数组维度非整数error
+                    } else{
+                        dims.add(((ConstInt) v).value);
+                    }
+                }
+                for(int i = dims.size() - 1; i >= 0; i--){
+                    bType = Type.arrayType(bType, dims.get(i));
+                }
+                if(ctx.ASSIGN() != null)
+                    initVal = visit(ctx.constInitVal());
+                else
+                    initVal = null;
+            }
+            retVal = AllocInst.create(this.visitCtx.basicBlock, ctx.Identifier().getText() + ".addr", bType);
+            if(initVal != null)
+                StoreInst.create(this.visitCtx.basicBlock, initVal, retVal);
+            symbolTableStack.addValue(ctx.Identifier().getText(), retVal);
+        }
+        return retVal;
     }
 
     /**
@@ -240,6 +310,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             }
             retVal = GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", false, initVal);
             this.symbolTableStack.addValue(ctx.Identifier().getText(), retVal);
+            this.module.globalVariables.insertAtEnd(((GlobalVariable) retVal));
         } else { //局部
             if(ctx.LB().size() == 0) { //局部变量
                 if(ctx.ASSIGN() != null)
@@ -521,17 +592,18 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      *     :Identifier (LB expr RB)*
      *     ;
      */
+    //FIXME
     @Override
     public Value visitLVal(SysYParser.LValContext ctx) {
         String var = ctx.Identifier().getText();
         Value var_ = symbolTableStack.findValue(var);
-        if(ctx.expr() == null){
+        if(ctx.expr().size() == 0){
             if(var_.getType().getTypeID() == Type.TypeID.ArrayTyID){
                 return var_;
             }else{
                 return LoadInst.create(visitCtx.basicBlock, null, var_);
             }
-        }else if(ctx.expr() != null){
+        }else{
             int arr_dim = ctx.expr().size();
             for (int i = 0; i < arr_dim; i++) {
                 Value tmp = visitExpr(ctx.expr(i));
@@ -569,7 +641,8 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
     @Override
     public Value visitNumber(SysYParser.NumberContext ctx) {
         if(ctx.IntConst() != null){
-            int type_ = ctx.IntConst().getSymbol().getType();
+            //FIXME
+            int type_ = 13;//ctx.IntConst().getSymbol().getType();
             if(type_ == SysYLexer.DECIMAL_CONST){
                 return ConstInt.create(new BigInteger(ctx.IntConst().getText(),10).intValue());
             }else if(type_ == SysYLexer.HEXADECIMAL_CONST){
