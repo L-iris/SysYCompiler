@@ -6,6 +6,7 @@ import ir.constval.ConstArray;
 import ir.constval.ConstFloat;
 import ir.constval.ConstInt;
 import ir.instructions.*;
+import ir.types.ArrayType;
 import ir.types.Type;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.RuleNode;
@@ -30,6 +31,13 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             Function,
         }
 
+        class Loop {
+            BasicBlock condBr;
+            BasicBlock trueBr;
+            BasicBlock falseBr;
+        }
+
+        Loop loop;
         Phase phase;
         Type bType;
         Type type;
@@ -345,8 +353,14 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         visit(ctx.bType());
         Type bType = this.visitCtx.bType;
         String name = ctx.Identifier().getText();
-        Type type = null;
-        //TODO from (LB RB (LB expr RB)*) to type
+        Type type = bType;
+        if(ctx.LB().size() != 0) {
+            List<SysYParser.ExprContext> exprs = ctx.expr();
+            for(int i=exprs.size()-1; i>=0; i--) {
+                ConstInt value = (ConstInt) visit(exprs.get(i));
+                type = Type.arrayType(type, value.value);
+            }
+        }
         funcFParam = Arg.create(-1, type, ctx.Identifier().getText());
         return funcFParam;
     }
@@ -358,8 +372,9 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitBlock(SysYParser.BlockContext ctx) {
+        BasicBlock basicBlock;
         if(this.visitCtx.args != null) {
-            BasicBlock basicBlock = BasicBlock.create(this.visitCtx.function, null);
+            basicBlock = BasicBlock.create(this.visitCtx.function, null);
             this.visitCtx.basicBlock = basicBlock;
             this.visitCtx.function.basicBlockIlist.insertAtEnd(basicBlock);
             for(var arg : this.visitCtx.args){
@@ -367,9 +382,17 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             }
             this.visitCtx.args = null;
         } else {
-
+            basicBlock = BasicBlock.create(this.visitCtx.function, null);
+            this.visitCtx.basicBlock.setNext(basicBlock);
+            basicBlock.setPrev(this.visitCtx.basicBlock);
+            this.visitCtx.basicBlock = basicBlock;
+            symbolTableStack.enterScope();
+            for(var bi:ctx.blockItem()){
+                visit(bi);
+            }
+            symbolTableStack.exitScope();
         }
-        return visitChildrenCallBack(ctx, null, null);
+        return basicBlock;
     }
 
     /**
@@ -397,23 +420,76 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
     @Override
     public Value visitStmt(SysYParser.StmtContext ctx) {
         if(ctx.ASSIGN() != null) { // 赋值语句
-
+            visitAssign(ctx);
         } else if(ctx.block() != null) {
-
+            visit(ctx.block());
         } else if(ctx.IF() != null) {
-
+            visitIf(ctx);
         } else if(ctx.WHILE() != null) {
-
+            visitWhile(ctx);
         } else if(ctx.BREAK() != null) {
-
+            visitBreak(ctx);
         } else if(ctx.CONTINUE() != null) {
-
+            visitContinue(ctx);
         } else if(ctx.RETURN() != null) {
-
+            visitReturn(ctx);
         } else {
-
+            visit(ctx.expr());
         }
         return null;
+    }
+
+    private Value visitAssign(SysYParser.StmtContext ctx) {
+        SysYParser.LValContext lVal = ctx.lVal();
+        SysYParser.ExprContext expr = ctx.expr();
+        Value var = visit(lVal);
+        Value val = visit(expr);
+        return StoreInst.create(visitCtx.basicBlock, val, var);
+    }
+
+    private Value visitIf(SysYParser.StmtContext ctx) {
+        Value cond = visit(ctx.cond());
+        BasicBlock trueBr = BasicBlock.create(visitCtx.function, null);
+        BasicBlock falseBr = BasicBlock.create(visitCtx.function, null);
+        BrInst brInst = BrInst.create(visitCtx.basicBlock, cond, trueBr, falseBr);
+        visitCtx.basicBlock = trueBr;
+        visit(ctx.stmt(0));
+        visitCtx.basicBlock = falseBr;
+        if(ctx.stmt().size() == 2)
+            visit(ctx.stmt(1));
+        return brInst;
+    }
+
+    private Value visitWhile(SysYParser.StmtContext ctx) {
+        BasicBlock condBr = BasicBlock.create(visitCtx.function, null);
+        visitCtx.basicBlock = condBr;
+        Value cond = visit(ctx.cond());
+        BasicBlock trueBr = BasicBlock.create(visitCtx.function, null);
+        BasicBlock falseBr = BasicBlock.create(visitCtx.function, null);
+        BrInst brInst = BrInst.create(visitCtx.basicBlock, cond, trueBr, falseBr);
+        visitCtx.loop.condBr = condBr;
+        visitCtx.loop.trueBr = trueBr;
+        visitCtx.loop.falseBr = falseBr;
+        visitCtx.basicBlock = trueBr;
+        visit(ctx.stmt(0));
+        BrInst.create(visitCtx.basicBlock, condBr);
+        visitCtx.basicBlock = falseBr;
+        return brInst;
+    }
+
+    private Value visitBreak(SysYParser.StmtContext ctx) {
+        return BrInst.create(visitCtx.basicBlock, visitCtx.loop.falseBr);
+    }
+
+    private Value visitContinue(SysYParser.StmtContext ctx) {
+        return BrInst.create(visitCtx.basicBlock, visitCtx.loop.condBr);
+    }
+
+    private Value visitReturn(SysYParser.StmtContext ctx) {
+        Value v = null;
+        if(ctx.expr() != null)
+            v = visit(ctx.expr());
+        return RetInst.create(visitCtx.basicBlock, v);
     }
     /**
      * expr
