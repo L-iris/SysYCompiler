@@ -1,20 +1,25 @@
 package frontend;
 
+import com.sun.security.auth.UnixNumericGroupPrincipal;
 import ir.*;
 import ir.Module;
 import ir.constval.ConstArray;
 import ir.constval.ConstFloat;
 import ir.constval.ConstInt;
 import ir.instructions.*;
-import ir.types.ArrayType;
 import ir.types.Type;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.RuleNode;
 import util.SymbolTableStack;
 import util.frontend.SysYBaseVisitor;
+import util.frontend.SysYLexer;
 import util.frontend.SysYParser;
 
+import javax.security.auth.callback.Callback;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
@@ -498,7 +503,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitExpr(SysYParser.ExprContext ctx) {
-
         return super.visitExpr(ctx);
     }
 
@@ -519,6 +523,21 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitLVal(SysYParser.LValContext ctx) {
+        String var = ctx.Identifier().getText();
+        Value var_ = symbolTableStack.findValue(var);
+        if(ctx.expr() == null){
+            if(var_.getType().getTypeID() == Type.TypeID.ArrayTyID){
+                return var_;
+            }else{
+                return LoadInst.create(visitCtx.basicBlock, null, var_);
+            }
+        }else if(ctx.expr() != null){
+            int arr_dim = ctx.expr().size();
+            for (int i = 0; i < arr_dim; i++) {
+                Value tmp = visitExpr(ctx.expr(i));
+                //TODO
+            }
+        }
         return super.visitLVal(ctx);
     }
 
@@ -531,6 +550,13 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitPrimaryExpr(SysYParser.PrimaryExprContext ctx) {
+        if(ctx.expr() != null){
+            return visitExpr(ctx.expr());
+        }else if(ctx.lVal() != null){
+            return visitLVal(ctx.lVal());
+        }else if(ctx.number() != null){
+            return visitNumber(ctx.number());
+        }
         return super.visitPrimaryExpr(ctx);
     }
 
@@ -542,6 +568,18 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitNumber(SysYParser.NumberContext ctx) {
+        if(ctx.IntConst() != null){
+            int type_ = ctx.IntConst().getSymbol().getType();
+            if(type_ == SysYLexer.DECIMAL_CONST){
+                return ConstInt.create(new BigInteger(ctx.IntConst().getText(),10).intValue());
+            }else if(type_ == SysYLexer.HEXADECIMAL_CONST){
+                return ConstInt.create(new BigInteger(ctx.IntConst().getText().substring(2),16).intValue());
+            }else if(type_ == SysYLexer.OCTAL_CONST){
+                return ConstInt.create(new BigInteger(ctx.IntConst().getText(),8).intValue());
+            }
+        }else if (ctx.FloatConst() != null){
+                return ConstFloat.create(new BigDecimal(ctx.FloatConst().getText()).floatValue());
+        }
         return super.visitNumber(ctx);
     }
 
@@ -564,11 +602,11 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                 }
                 if(ctx.unaryOp().MINUS() != null){
                     int value = ((ConstInt) operand).value;
-                    return new ConstInt(-value);
+                    return ConstInt.create(value);
                 }
                 if(ctx.unaryOp().NOT() != null){
                     int value = ((ConstInt) operand).value;
-                    return new ConstInt(value == 0 ? 1 : 0);
+                    return ConstInt.create(value == 0 ? 1 :0);
                 }
             }else if(operand instanceof ConstFloat){
                 if(ctx.unaryOp().ADD() != null){
@@ -576,11 +614,11 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                 }
                 if(ctx.unaryOp().MINUS() != null){
                     float value = ((ConstFloat) operand).value;
-                    return new ConstFloat(-value);
+                    return ConstFloat.create(value);
                 }
                 if(ctx.unaryOp().NOT() != null){
                     float value = ((ConstFloat) operand).value;
-                    return new ConstFloat(value == 0 ? 1 : 0);
+                    return ConstFloat.create(value == 0 ? 1 : 0) ;
                 }
             }else{
                 if(ctx.unaryOp().ADD() != null){
@@ -603,12 +641,17 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             }
         }else if(ctx.Identifier() != null){
                String type_name = ctx.Identifier().getText();
-               Value type_ = symbolTableStack.findValue(type_name);
+               Value type_ = symbolTableStack.findValueCurrentScope(type_name);
+               assert type_ instanceof Function;
                if(ctx.funcRParams() != null){
-                   List<SysYParser.ExprContext> paramsContext;
-                   paramsContext = ctx.funcRParams().expr();
+                   Value[] params = new Value[ctx.funcRParams().expr().size()];
                    //循环visit expr
+                   for(int i = 0;i<ctx.funcRParams().expr().size();i++){
+                       params[i] = visitExpr(ctx.funcRParams().expr(i));
+                   }
+                   CallInst.create(visitCtx.basicBlock, null, (Function) type_, params);
                }
+               CallInst.create(visitCtx.basicBlock, null, (Function) type_);
         }
         return super.visitUnaryExpr(ctx);
     }
@@ -658,7 +701,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                 else if(ctx.getChild(2*i-1).getText().equals("%"))
                     operand1 = BinaryInst.create(visitCtx.basicBlock, Type.i32(), null, Instruction.InstType.SREM, operand1, operand2);
             } else {
-                //TODO
                 if(operand1.getType().getTypeID() == Type.TypeID.IntegerTyID) {
                     operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.SITOFP, operand1, Type.f32());
                     if (ctx.getChild(2 * i - 1).getText().equals("*"))
@@ -759,7 +801,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                 else
                     operand1 = BinaryInst.create(visitCtx.basicBlock, Type.i32(), null, Instruction.InstType.SUB, operand1, operand2);
             } else {
-                //TODO
                 if(operand1.getType().getTypeID() == Type.TypeID.IntegerTyID) {
                     operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.SITOFP, operand1, Type.f32());
                     if (ctx.getChild(2 * i - 1).getText().equals("+"))
@@ -828,7 +869,94 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitRelExpr(SysYParser.RelExprContext ctx) {
-        return super.visitRelExpr(ctx);
+        Value operand1 = visitAddExpr(ctx.addExpr(0));
+        for(int i = 1; i<ctx.addExpr().size(); i++){
+            Value operand2 = visitAddExpr(ctx.addExpr(i));
+            if(operand1.getType().getTypeID() == Type.TypeID.IntegerTyID && operand2.getType().getTypeID() == Type.TypeID.IntegerTyID){
+                if(ctx.getChild(2 * i - 1).getText() == "<"){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSLT, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == ">"){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSGT, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == "<="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSLE, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == ">="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSGE, operand1, operand2);
+                }
+            }else if(operand1.getType().getTypeID() == Type.TypeID.IntegerTyID && operand2.getType().getTypeID() == Type.TypeID.FloatTyID){
+                operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.SITOFP, operand1, Type.f32());
+                if(ctx.getChild(2 * i - 1).getText() == "<"){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLT, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == ">"){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGT, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == "<="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLE, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == ">="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGE, operand1, operand2);
+                }
+            }else if(operand1.getType().getTypeID() == Type.TypeID.FloatTyID && operand2.getType().getTypeID() == Type.TypeID.IntegerTyID){
+                operand2 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.SITOFP, operand2,Type.f32());
+                if(ctx.getChild(2 * i - 1).getText() == "<"){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLT, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == ">"){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGT, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == "<="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLE, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == ">="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGE, operand1, operand2);
+                }
+            }else if(operand1.getType().getTypeID() == Type.TypeID.FloatTyID && operand2.getType().getTypeID() == Type.TypeID.FloatTyID){
+                if(ctx.getChild(2 * i - 1).getText() == "<"){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLT, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == ">"){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGT, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == "<="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLE, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == ">="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGE, operand1, operand2);
+                }
+            }else if(operand1.getType().getTypeID() == Type.TypeID.BooleanTyID && operand2.getType().getTypeID() == Type.TypeID.IntegerTyID){
+                operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.ZEXT, operand1, Type.i32());
+                if(ctx.getChild(2 * i - 1).getText() == "<"){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSLT, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == ">"){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSGT, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == "<="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSLE, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == ">="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSGE, operand1, operand2);
+                }
+            }else if(operand1.getType().getTypeID() == Type.TypeID.BooleanTyID && operand2.getType().getTypeID() == Type.TypeID.FloatTyID){
+                operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.ZEXT, operand1, Type.f32());
+                if(ctx.getChild(2 * i - 1).getText() == "<"){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLT, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == ">"){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGT, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == "<="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLE, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == ">="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGE, operand1, operand2);
+                }
+            }
+        }
+        return operand1;
     }
 
     /**
@@ -838,10 +966,28 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitEqExpr(SysYParser.EqExprContext ctx) {
-        // visitRelExpr() -> Union[i1, i32, f32]
-        Value operand1 = visit(ctx.relExpr(0));
-
-        return super.visitEqExpr(ctx);
+        Value operand1 = visitRelExpr(ctx.relExpr(0));
+        for(int i = 1; i < ctx.relExpr().size(); i++){
+            Value operand2 = visitRelExpr(ctx.relExpr(i));
+            if(operand2.getType().getTypeID() == Type.TypeID.IntegerTyID){
+                operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.ZEXT, operand1, Type.i32());
+                if(ctx.getChild(2 * i - 1).getText() == "=="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPEQ, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == "!="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPNE, operand1, operand2);
+                }
+            }else if(operand2.getType().getTypeID() == Type.TypeID.FloatTyID){
+                operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.ZEXT, operand1, Type.f32());
+                if(ctx.getChild(2 * i - 1).getText() == "=="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPEQ, operand1, operand2);
+                }
+                if(ctx.getChild(2 * i - 1).getText() == "!="){
+                    operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPNE, operand1, operand2);
+                }
+            }
+        }
+        return operand1;
     }
 
     /**
@@ -851,7 +997,12 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitLAndExpr(SysYParser.LAndExprContext ctx) {
-        return super.visitLAndExpr(ctx);
+        Value operand1 = visitEqExpr(ctx.eqExpr(0));
+        for(int i = 1; i < ctx.eqExpr().size(); i++){
+            Value operand2 = visitEqExpr(ctx.eqExpr(i));
+            operand1 = BinaryInst.create(visitCtx.basicBlock, null, Type.i1(), null, Instruction.InstType.AND, operand1, operand2);
+        }
+        return operand1;
     }
 
     /**
@@ -861,6 +1012,11 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitLOrExpr(SysYParser.LOrExprContext ctx) {
+        Value operand1 = visitLAndExpr(ctx.lAndExpr(0));
+        for(int i = 1;i < ctx.lAndExpr().size(); i++){
+            Value operand2 = visitLAndExpr(ctx.lAndExpr(i));
+            operand1 = BinaryInst.create(visitCtx.basicBlock, null, Type.i1(), null, Instruction.InstType.OR, operand1, operand2);
+        }
         return super.visitLOrExpr(ctx);
     }
 
