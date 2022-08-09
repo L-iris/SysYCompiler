@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Callable;
 
 public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
@@ -592,25 +593,21 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      *     :Identifier (LB expr RB)*
      *     ;
      */
-    //FIXME
     @Override
     public Value visitLVal(SysYParser.LValContext ctx) {
         String var = ctx.Identifier().getText();
         Value var_ = symbolTableStack.findValue(var);
         if(ctx.expr().size() == 0){
-            if(var_.getType().getTypeID() == Type.TypeID.ArrayTyID){
-                return var_;
-            }else{
-                return LoadInst.create(visitCtx.basicBlock, null, var_);
-            }
+            return var_;
         }else{
             int arr_dim = ctx.expr().size();
+            Value index_array[] = new Value[arr_dim];
             for (int i = 0; i < arr_dim; i++) {
                 Value tmp = visitExpr(ctx.expr(i));
-                //TODO
+                index_array[arr_dim] = tmp;
             }
+            return GEPInst.create(visitCtx.basicBlock, null, var_, index_array);
         }
-        return super.visitLVal(ctx);
     }
 
     /**
@@ -641,14 +638,13 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
     @Override
     public Value visitNumber(SysYParser.NumberContext ctx) {
         if(ctx.IntConst() != null){
-            //FIXME
-            int type_ = 13;//ctx.IntConst().getSymbol().getType();
-            if(type_ == SysYLexer.DECIMAL_CONST){
-                return ConstInt.create(new BigInteger(ctx.IntConst().getText(),10).intValue());
-            }else if(type_ == SysYLexer.HEXADECIMAL_CONST){
-                return ConstInt.create(new BigInteger(ctx.IntConst().getText().substring(2),16).intValue());
-            }else if(type_ == SysYLexer.OCTAL_CONST){
-                return ConstInt.create(new BigInteger(ctx.IntConst().getText(),8).intValue());
+            String type_ = ctx.IntConst().getText();
+            if(type_.substring(0,2).equalsIgnoreCase("0x")){
+                return ConstInt.create(new BigInteger(type_.substring(2),16).intValue());
+            }else if(type_.substring(0,1).equals("0")){
+                return ConstInt.create(new BigInteger(type_,8).intValue());
+            }else{
+                return ConstInt.create(new BigInteger(type_,10).intValue());
             }
         }else if (ctx.FloatConst() != null){
                 return ConstFloat.create(new BigDecimal(ctx.FloatConst().getText()).floatValue());
@@ -674,7 +670,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                     return operand;
                 }
                 if(ctx.unaryOp().MINUS() != null){
-                    int value = ((ConstInt) operand).value;
+                    int value = -((ConstInt) operand).value;
                     return ConstInt.create(value);
                 }
                 if(ctx.unaryOp().NOT() != null){
@@ -686,7 +682,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                     return operand;
                 }
                 if(ctx.unaryOp().MINUS() != null){
-                    float value = ((ConstFloat) operand).value;
+                    float value = -((ConstFloat) operand).value;
                     return ConstFloat.create(value);
                 }
                 if(ctx.unaryOp().NOT() != null){
