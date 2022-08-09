@@ -310,7 +310,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             }
             retVal = GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", false, initVal);
             this.symbolTableStack.addValue(ctx.Identifier().getText(), retVal);
-            this.module.globalVariables.insertAtEnd(((GlobalVariable) retVal));
         } else { //局部
             if(ctx.LB().size() == 0) { //局部变量
                 if(ctx.ASSIGN() != null)
@@ -607,7 +606,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         String var = ctx.Identifier().getText();
         Value var_ = symbolTableStack.findValue(var);
         if(ctx.expr().size() == 0){
-            return var_;
+            return LoadInst.create(this.visitCtx.basicBlock, null, var_);
         }else{
             int arr_dim = ctx.expr().size();
             Value index_array[] = new Value[arr_dim];
@@ -648,6 +647,9 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
     public Value visitNumber(SysYParser.NumberContext ctx) {
         if(ctx.IntConst() != null){
             String type_ = ctx.IntConst().getText();
+            if(type_.length() == 1){
+                return ConstInt.create(new BigInteger(type_,10).intValue());
+            }
             if(type_.substring(0,2).equalsIgnoreCase("0x")){
                 return ConstInt.create(new BigInteger(type_.substring(2),16).intValue());
             }else if(type_.substring(0,1).equals("0")){

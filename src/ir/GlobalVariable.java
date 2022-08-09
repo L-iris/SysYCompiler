@@ -19,7 +19,7 @@ public class GlobalVariable extends Constant implements IListNode<GlobalVariable
 
 
     public GlobalVariable(Type type, String name, boolean isConst, Value userOperand) {
-        super(type, name, 1, userOperand);
+        super(Type.pointerType(type), name, 1, userOperand);
         this.isConst = isConst;
     }
 
