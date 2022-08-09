@@ -7,4 +7,9 @@ public class VoidType extends Type{
     private VoidType() {
         super(TypeID.VoidTyID);
     }
+
+    @Override
+    public String toString() {
+        return "void";
+    }
 }

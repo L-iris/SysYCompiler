@@ -14,4 +14,9 @@ public class ConstFloat extends Value {
     public static ConstFloat create(float v) {
         return new ConstFloat(v);
     }
+
+    @Override
+    public String toString() {
+        return String.valueOf(value);
+    }
 }

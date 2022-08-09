@@ -24,4 +24,8 @@ public class AllocInst extends Instruction{
         return allocInst;
     }
 
+    @Override
+    public String toString() {
+        return this.name + " = alloc "+allocType;
+    }
 }

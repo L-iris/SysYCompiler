@@ -21,4 +21,9 @@ public class ArrayType extends Type{
     public void setContainedType(Type containedType) {
         this.containedType = containedType;
     }
+
+    @Override
+    public String toString() {
+        return "[ "+this.numElements + " * " + this.containedType+" ]";
+    }
 }

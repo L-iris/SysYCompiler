@@ -27,4 +27,9 @@ public class Arg extends Value implements Comparable<Arg>{
         this.pos = i;
         return true;
     }
+
+    @Override
+    public String toString() {
+        return this.type + " " + this.name;
+    }
 }

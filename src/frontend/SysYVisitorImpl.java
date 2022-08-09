@@ -39,7 +39,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             BasicBlock falseBr;
         }
 
-        Loop loop;
+        Loop loop = new Loop();
         Phase phase;
         Type bType;
         Type type;
@@ -74,6 +74,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                     afterVisit.call();
             } catch (Exception e) {
                 e.printStackTrace();
+                System.exit(0);
             }
             result = this.aggregateResult(result, childResult);
         }
@@ -205,7 +206,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             }
             retVal = GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", false, initVal);
             this.symbolTableStack.addValue(ctx.Identifier().getText(), retVal);
-            this.module.globalVariables.insertAtEnd((GlobalVariable)retVal);
         } else { //局部
             if(ctx.LB().size() == 0) { //局部变量
                 if(ctx.ASSIGN() != null)
@@ -310,7 +310,6 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             }
             retVal = GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", false, initVal);
             this.symbolTableStack.addValue(ctx.Identifier().getText(), retVal);
-            this.module.globalVariables.insertAtEnd(((GlobalVariable) retVal));
         } else { //局部
             if(ctx.LB().size() == 0) { //局部变量
                 if(ctx.ASSIGN() != null)
@@ -371,7 +370,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         visit(ctx.funcType());
         Type retType = this.visitCtx.retType;
         String funcName = ctx.Identifier().getText();
-        visit(ctx.funcFParams());
+        if(ctx.funcFParams() != null)
+            visit(ctx.funcFParams());
+        else
+            this.visitCtx.args = new ArrayList<>(0);
         List<Arg> args = this.visitCtx.args;
         Function function = Function.create(false, module, retType, funcName, args);
         symbolTableStack.addValue(funcName, function);
@@ -452,22 +454,19 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         if(this.visitCtx.args != null) {
             basicBlock = BasicBlock.create(this.visitCtx.function, null);
             this.visitCtx.basicBlock = basicBlock;
-            this.visitCtx.function.basicBlockIlist.insertAtEnd(basicBlock);
+            AllocInst.create(basicBlock, null, this.visitCtx.function.getFunctionType().getRetType());
             for(var arg : this.visitCtx.args){
-                basicBlock.instructionIList.insertAtEnd(AllocInst.create(basicBlock, null, arg.getType()));
+                StoreInst.create(this.visitCtx.basicBlock, arg, AllocInst.create(basicBlock, null, arg.getType()));
             }
             this.visitCtx.args = null;
-        } else {
-            basicBlock = BasicBlock.create(this.visitCtx.function, null);
-            this.visitCtx.basicBlock.setNext(basicBlock);
-            basicBlock.setPrev(this.visitCtx.basicBlock);
-            this.visitCtx.basicBlock = basicBlock;
-            symbolTableStack.enterScope();
-            for(var bi:ctx.blockItem()){
-                visit(bi);
-            }
-            symbolTableStack.exitScope();
         }
+        basicBlock = BasicBlock.create(this.visitCtx.function, null);
+        this.visitCtx.basicBlock = basicBlock;
+        symbolTableStack.enterScope();
+        for(var bi:ctx.blockItem()){
+            visit(bi);
+        }
+        symbolTableStack.exitScope();
         return basicBlock;
     }
 
@@ -478,6 +477,9 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitBlockItem(SysYParser.BlockItemContext ctx) {
+        if(ctx.decl() != null) {
+
+        }
         return super.visitBlockItem(ctx);
     }
 
@@ -601,7 +603,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             if(var_.getType().getTypeID() == Type.TypeID.ArrayTyID){
                 return var_;
             }else{
-                return LoadInst.create(visitCtx.basicBlock, null, var_);
+                return var_;
             }
         }else{
             int arr_dim = ctx.expr().size();
@@ -946,85 +948,85 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         for(int i = 1; i<ctx.addExpr().size(); i++){
             Value operand2 = visitAddExpr(ctx.addExpr(i));
             if(operand1.getType().getTypeID() == Type.TypeID.IntegerTyID && operand2.getType().getTypeID() == Type.TypeID.IntegerTyID){
-                if(ctx.getChild(2 * i - 1).getText() == "<"){
+                if(ctx.getChild(2 * i - 1).getText().equals("<")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSLT, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == ">"){
+                if(ctx.getChild(2 * i - 1).getText().equals(">")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSGT, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == "<="){
+                if(ctx.getChild(2 * i - 1).getText().equals("<=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSLE, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == ">="){
+                if(ctx.getChild(2 * i - 1).getText().equals(">=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSGE, operand1, operand2);
                 }
             }else if(operand1.getType().getTypeID() == Type.TypeID.IntegerTyID && operand2.getType().getTypeID() == Type.TypeID.FloatTyID){
                 operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.SITOFP, operand1, Type.f32());
-                if(ctx.getChild(2 * i - 1).getText() == "<"){
+                if(ctx.getChild(2 * i - 1).getText().equals("<")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLT, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == ">"){
+                if(ctx.getChild(2 * i - 1).getText().equals(">")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGT, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == "<="){
+                if(ctx.getChild(2 * i - 1).getText().equals("<=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLE, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == ">="){
+                if(ctx.getChild(2 * i - 1).getText().equals(">=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGE, operand1, operand2);
                 }
             }else if(operand1.getType().getTypeID() == Type.TypeID.FloatTyID && operand2.getType().getTypeID() == Type.TypeID.IntegerTyID){
                 operand2 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.SITOFP, operand2,Type.f32());
-                if(ctx.getChild(2 * i - 1).getText() == "<"){
+                if(ctx.getChild(2 * i - 1).getText().equals("<")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLT, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == ">"){
+                if(ctx.getChild(2 * i - 1).getText().equals(">")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGT, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == "<="){
+                if(ctx.getChild(2 * i - 1).getText().equals("<=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLE, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == ">="){
+                if(ctx.getChild(2 * i - 1).getText().equals(">=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGE, operand1, operand2);
                 }
             }else if(operand1.getType().getTypeID() == Type.TypeID.FloatTyID && operand2.getType().getTypeID() == Type.TypeID.FloatTyID){
-                if(ctx.getChild(2 * i - 1).getText() == "<"){
+                if(ctx.getChild(2 * i - 1).getText().equals("<")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLT, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == ">"){
+                if(ctx.getChild(2 * i - 1).getText().equals(">")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGT, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == "<="){
+                if(ctx.getChild(2 * i - 1).getText().equals("<=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLE, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == ">="){
+                if(ctx.getChild(2 * i - 1).getText().equals(">=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGE, operand1, operand2);
                 }
             }else if(operand1.getType().getTypeID() == Type.TypeID.BooleanTyID && operand2.getType().getTypeID() == Type.TypeID.IntegerTyID){
                 operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.ZEXT, operand1, Type.i32());
-                if(ctx.getChild(2 * i - 1).getText() == "<"){
+                if(ctx.getChild(2 * i - 1).getText().equals("<")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSLT, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == ">"){
+                if(ctx.getChild(2 * i - 1).getText().equals(">")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSGT, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == "<="){
+                if(ctx.getChild(2 * i - 1).getText().equals("<=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSLE, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == ">="){
+                if(ctx.getChild(2 * i - 1).getText().equals(">=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPSGE, operand1, operand2);
                 }
             }else if(operand1.getType().getTypeID() == Type.TypeID.BooleanTyID && operand2.getType().getTypeID() == Type.TypeID.FloatTyID){
                 operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.ZEXT, operand1, Type.f32());
-                if(ctx.getChild(2 * i - 1).getText() == "<"){
+                if(ctx.getChild(2 * i - 1).getText().equals("<")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLT, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == ">"){
+                if(ctx.getChild(2 * i - 1).getText().equals(">")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGT, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == "<="){
+                if(ctx.getChild(2 * i - 1).getText().equals("<=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOLE, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == ">="){
+                if(ctx.getChild(2 * i - 1).getText().equals(">=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPOGE, operand1, operand2);
                 }
             }
@@ -1044,18 +1046,18 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             Value operand2 = visitRelExpr(ctx.relExpr(i));
             if(operand2.getType().getTypeID() == Type.TypeID.IntegerTyID){
                 operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.ZEXT, operand1, Type.i32());
-                if(ctx.getChild(2 * i - 1).getText() == "=="){
+                if(ctx.getChild(2 * i - 1).getText().equals("==")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPEQ, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == "!="){
+                if(ctx.getChild(2 * i - 1).getText().equals("!=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.ICMPNE, operand1, operand2);
                 }
             }else if(operand2.getType().getTypeID() == Type.TypeID.FloatTyID){
                 operand1 = ConvertInst.create(visitCtx.basicBlock, null, null, Instruction.InstType.ZEXT, operand1, Type.f32());
-                if(ctx.getChild(2 * i - 1).getText() == "=="){
+                if(ctx.getChild(2 * i - 1).getText().equals("==")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPEQ, operand1, operand2);
                 }
-                if(ctx.getChild(2 * i - 1).getText() == "!="){
+                if(ctx.getChild(2 * i - 1).getText().equals("!=")){
                     operand1 = CmpInst.create(visitCtx.basicBlock, null, Instruction.InstType.FCMPNE, operand1, operand2);
                 }
             }

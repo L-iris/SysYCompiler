@@ -5,4 +5,9 @@ public class BooleanType extends Type{
     private BooleanType() {
         super(TypeID.BooleanTyID);
     }
+
+    @Override
+    public String toString() {
+        return "i1";
+    }
 }

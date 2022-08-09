@@ -85,4 +85,10 @@ public class GlobalVariable extends Constant implements IListNode<GlobalVariable
         this.parent = parent;
         return false;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder str = new StringBuilder();
+        return str.append(this.name).append(" = ").append("global ").append(this.type).append(", ").append(this.userOperands.get(0)).toString();
+    }
 }

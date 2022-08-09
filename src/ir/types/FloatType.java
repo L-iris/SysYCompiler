@@ -14,4 +14,9 @@ public class FloatType extends Type{
         super(TypeID.FloatTyID);
         this.numBits = 32;
     }
+
+    @Override
+    public String toString() {
+        return "f32";
+    }
 }

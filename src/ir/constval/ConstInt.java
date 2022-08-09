@@ -14,4 +14,9 @@ public class ConstInt extends Value {
     public static ConstInt create(int v) {
         return new ConstInt(v);
     }
+
+    @Override
+    public String toString() {
+        return String.valueOf(value);
+    }
 }

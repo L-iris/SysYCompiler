@@ -21,8 +21,9 @@ public class IList<V,P> implements Iterable<IListNode<V,P>> {
     private IListNode<V,P> last;
     private P owner;
 
-    public IList() {
+    public IList(P owner) {
         numNode = 0;
+        this.owner = owner;
     }
 
     public IListNode<V,P> get(int i) {
@@ -64,10 +65,9 @@ public class IList<V,P> implements Iterable<IListNode<V,P>> {
             return true;
         }
         boolean b = node.setPrev(this.last) | node.setNext(null) | this.last.setNext(node);
-        if(b) {
-            node.setParent(owner);
-            numNode++;
-        }
+        this.last = node;
+        node.setParent(owner);
+        numNode++;
         return b;
     }
 

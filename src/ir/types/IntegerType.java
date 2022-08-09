@@ -14,4 +14,9 @@ public class IntegerType extends Type{
         super(TypeID.IntegerTyID);
         this.numBits = 32;
     }
+
+    @Override
+    public String toString() {
+        return "i32";
+    }
 }

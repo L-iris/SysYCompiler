@@ -29,13 +29,13 @@ public class Function extends Constant implements IListNode<Function,Module>, It
 
     private List<Arg> argList;
 
-    private boolean isBuiltin;
+    boolean isBuiltin;
     public IList<BasicBlock, Function> basicBlockIlist;
 
     public Function(FunctionType functionType, String name, List<Arg> argList, boolean isBuiltin, Module parent) {
         super(functionType, name);
+        this.basicBlockIlist = new IList<>(this);
         this.argList = argList;
-        parent.functions.insertAtEnd(this);
         this.parent = parent;
         this.isBuiltin = isBuiltin;
     }
@@ -125,19 +125,19 @@ public class Function extends Constant implements IListNode<Function,Module>, It
     @Override
     public boolean setNext(IListNode<Function, Module> node) {
         this.next = node;
-        return false;
+        return true;
     }
 
     @Override
     public boolean setPrev(IListNode<Function, Module> node) {
         this.prev = node;
-        return false;
+        return true;
     }
 
     @Override
     public boolean setParent(Module parent) {
         this.parent = parent;
-        return false;
+        return true;
     }
 
     public FunctionType getFunctionType() {
@@ -147,5 +147,16 @@ public class Function extends Constant implements IListNode<Function,Module>, It
 
     public int getNumBasicBlock() {
         return this.basicBlockIlist.getNumNode();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder str= new StringBuilder("define " + ((FunctionType) this.type).getRetType() + " " + this.name + this.argList);
+        str.append("{\n");
+        for(var b:this) {
+            str.append(b).append("\n");
+        }
+        str.append("}");
+        return str.toString();
     }
 }

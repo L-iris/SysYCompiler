@@ -14,6 +14,7 @@ public class Value {
     protected Type type;
     protected List<Use> useList;
     protected String name;
+    private static int cnt = 0;
 
 //    public Value(Type type, List<Use> useList, String name) {
 //        this.type = type;
@@ -24,12 +25,16 @@ public class Value {
     public Value(Type type, String name) {
         this.type = type;
         this.useList = new ArrayList<Use>();
+        if(name == null){
+            name = "%" + Integer.valueOf(cnt++).toString();
+        }
         this.name = name;
     }
 
     public Value(Type type) {
         this.type = type;
         this.useList = new ArrayList<Use>();
+        this.name = "%" + Integer.valueOf(cnt++).toString();
     }
 
     public Type getType() {

@@ -24,6 +24,19 @@ import java.util.Iterator;
  */
 public class BasicBlock extends Value implements IListNode<BasicBlock,Function>, Iterable<Instruction> {
 
+    class BasicBlockIterator implements Iterator<Instruction> {
+        private int cursor = 0;
+        @Override
+        public boolean hasNext() {
+            return cursor < BasicBlock.this.instructionIList.getNumNode();
+        }
+
+        @Override
+        public Instruction next() {
+            return BasicBlock.this.instructionIList.get(cursor++).getVal();
+        }
+    }
+
     private BasicBlock next;
     private BasicBlock prev;
     private Function parent;
@@ -38,8 +51,8 @@ public class BasicBlock extends Value implements IListNode<BasicBlock,Function>,
 
     public BasicBlock(String name, Function parent) {
         super(Type.labelType(), name);
+        this.instructionIList = new IList<>(this);
         this.parent = parent;
-        this.parent.basicBlockIlist.insertAtEnd(this);
     }
 
     public static BasicBlock create(Function parent, BasicBlock insertBefore, String name) {
@@ -54,7 +67,7 @@ public class BasicBlock extends Value implements IListNode<BasicBlock,Function>,
 
     @Override
     public Iterator<Instruction> iterator() {
-        return null;
+        return new BasicBlockIterator();
     }
 
     @Override
@@ -79,11 +92,13 @@ public class BasicBlock extends Value implements IListNode<BasicBlock,Function>,
 
     @Override
     public boolean setNext(IListNode<BasicBlock, Function> node) {
+        this.next = (BasicBlock) node;
         return false;
     }
 
     @Override
     public boolean setPrev(IListNode<BasicBlock, Function> node) {
+        this.prev = (BasicBlock) node;
         return false;
     }
 
@@ -91,5 +106,14 @@ public class BasicBlock extends Value implements IListNode<BasicBlock,Function>,
     public boolean setParent(Function parent) {
         this.parent = parent;
         return false;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder str= new StringBuilder(this.name + ":\n");
+        for(var i:this) {
+            str.append("\t").append(i).append("\n");
+        }
+        return str.toString();
     }
 }
