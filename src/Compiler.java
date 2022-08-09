@@ -22,8 +22,9 @@ public class Compiler {
         CommonTokenStream tokens = new CommonTokenStream(lexer);
 
         SysYParser parser = new SysYParser(tokens);
-        ParseTree tree = parser.program();
 
+        ParseTree tree = parser.program();
+        System.out.println(tree.toStringTree(parser));
         SysYVisitorImpl visitor = new SysYVisitorImpl(new Module());
         visitor.visit(tree);
         System.out.println(visitor.module.toString());
