@@ -1,6 +1,5 @@
-// Generated from D:/IdeaProjects/SysYCompiler\SysY.g4 by ANTLR 4.10.1
+// Generated from D:/—ßœ∞/±‡“Î‘≠¿Ì/git/SysCompiler\SysY.g4 by ANTLR 4.10.1
 package util.frontend;
-import ir.BasicBlock;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.*;
@@ -1426,11 +1425,6 @@ public class SysYParser extends Parser {
 	}
 
 	public static class CondContext extends ParserRuleContext {
-		public BasicBlock falseblock;
-		public BasicBlock trueblock;
-		public boolean isLoopCond=false;
-
-
 		public LOrExprContext lOrExpr() {
 			return getRuleContext(LOrExprContext.class,0);
 		}

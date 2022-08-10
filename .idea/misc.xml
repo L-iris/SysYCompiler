@@ -6,7 +6,7 @@
         <PerGrammarGenerationSettings>
           <option name="fileName" value="$PROJECT_DIR$/SysY.g4" />
           <option name="autoGen" value="true" />
-          <option name="outputDir" value="D:\IdeaProjects\SysYCompiler\src" />
+          <option name="outputDir" value="D:\学习\编译原理\git\SysCompiler\src" />
           <option name="libDir" value="" />
           <option name="encoding" value="" />
           <option name="pkg" value="util.frontend" />

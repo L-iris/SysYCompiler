@@ -61,7 +61,7 @@ public class Compiler {
         File file=new File(dictionary_name);
         File fa[]=file.listFiles();
         for(int i=0;i<fa.length;i++){
-            if(!fa[i].isDirectory()){
+            if(!fa[i].isDirectory()&&fa[i].getName().endsWith(".sy")){
                 try {
                     input=CharStreams.fromFileName(dictionary_name+"\\"+fa[i].getName());
                 } catch (IOException e) {
@@ -83,4 +83,8 @@ public class Compiler {
             }
         }
     }
+    public static void write_to_target(String filename,String result){
+
+    }
+
 }

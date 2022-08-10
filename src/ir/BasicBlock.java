@@ -68,12 +68,6 @@ public class BasicBlock extends Value implements IListNode<BasicBlock,Function>,
     public static BasicBlock create(Function parent, String name) {
         return create(parent, null, name);
     }
-    public BasicBlock(Function function,String name){
-        super(LabelType.labelType(),name);
-    }
-    /*public BasicBlock(Function function,String name){
-        super(LabelType.labelType(),name);
-    }*/
 
     @Override
     public Iterator<Instruction> iterator() {
