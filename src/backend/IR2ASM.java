@@ -45,7 +45,7 @@ public class IR2ASM {
                     }
                 }
 
-                addLine("." + bb.getName() + ":");
+                addLine("MB" + bb.getName() + ":");
                 for(var in:bb) {
                     Instruction inst = in.getVal();
 
