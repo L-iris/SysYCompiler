@@ -19,7 +19,8 @@
         </SOURCES>
         <jarDirectory url="file://$MODULE_DIR$/lib" recursive="false" />
         <jarDirectory url="file://$MODULE_DIR$/lib" recursive="false" type="SOURCES" />
-      </library>j
+      </library>
     </orderEntry>
+    <orderEntry type="library" name="antlr4-runtime-4.8" level="project" />
   </component>
 </module>
