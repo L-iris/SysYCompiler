@@ -94,9 +94,8 @@ public class IR2ASM {
                 String name = gv.getName().substring(0, gv.getName().length() - 5);
                 addLine(".global "+ name);
                 addLine(name+":");
-                for(var v:((ConstArray) init).containedValue){
-
-                }
+                ConstArray v = ((ConstArray) init);
+                addLine(v.genAsm());
             }
         }
 

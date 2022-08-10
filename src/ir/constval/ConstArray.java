@@ -67,4 +67,20 @@ public class ConstArray extends Value {
         assert v.getType().equals(((ArrayType) this.type).getContainedType());
         return containedValue.set(i, v);
     }
+
+    public String genAsm(){
+        StringBuilder str = new StringBuilder();
+        for(var v:this.containedValue){
+            if(v instanceof ConstArray){
+                str.append(((ConstArray) v).genAsm() + "\n");
+            } else {
+                if(v instanceof ConstInt){
+                    str.append("\t.word "+((ConstInt) v).value+"\n");
+                } else if(v instanceof ConstFloat) {
+                    str.append("\t.float "+((ConstFloat) v).value+"\n");
+                }
+            }
+        }
+        return str.toString();
+    }
 }
