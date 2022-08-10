@@ -7,8 +7,10 @@ import ir.Value;
 import ir.constval.ConstArray;
 import ir.constval.ConstFloat;
 import ir.constval.ConstInt;
+import ir.instructions.AllocInst;
 import ir.instructions.Instruction;
 import ir.instructions.RetInst;
+import ir.instructions.StoreInst;
 
 public class IR2ASM {
     public Module module;
@@ -67,14 +69,27 @@ public class IR2ASM {
                             } else if(retInst.getRetValue() instanceof ConstArray) {
                                 addLine("mov r0,#"+((ConstFloat) retInst.getRetValue()).value);
                                 addLine("bx lr");
+                            } else {
+                                if(retInst.getRetValue() instanceof AllocInst){
+                                    AllocInst ret = ((AllocInst) retInst.getRetValue());
+                                    Instruction instr = ret.getNext().getVal();
+                                    if(instr instanceof StoreInst){
+                                        Value value = instr.getOperand(0);
+                                        if(value instanceof ConstInt){
+                                            addLine("mov r0,#"+((ConstInt) value).value);
+                                            addLine("bx lr");
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
         }
+        addLine("");
         if(module.globalVariables.getNumNode() !=0) {
-            addLine(".data\n");
+            addLine(".data");
             addLine(".align 4");
         }
         for(var gn:module.globalVariables) {

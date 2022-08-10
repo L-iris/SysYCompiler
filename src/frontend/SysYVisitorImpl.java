@@ -639,7 +639,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                     return ((GlobalVariable)var_).getOperand(0);
                 }
             }
-            return LoadInst.create(this.visitCtx.basicBlock, null, var_);
+            return var_;//LoadInst.create(this.visitCtx.basicBlock, null, var_);
         }else{
             int arr_dim = ctx.expr().size();
             Value index_array[] = new Value[arr_dim];
