@@ -9,13 +9,15 @@ import util.frontend.SysYLexer;
 import util.frontend.SysYParser;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
 
 public class Compiler {
     public static void main(String[] args) {
         CharStream input = null;
         try {
-            input = CharStreams.fromFileName(args[0]);
+            input = CharStreams.fromFileName(args[2]);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -31,6 +33,21 @@ public class Compiler {
         System.out.println(visitor.module.toString());
 
         var g = new IR2ASM(visitor.module);
-        System.out.println(g.genAsm());
+        String asm = g.genAsm();
+        System.out.println(asm);
+
+        String output = args[3];
+        File file = new File(output);
+        FileWriter fw;
+
+        try {
+
+            fw=new FileWriter(file);
+
+            fw.write(asm);//将字符串写入到指定的路径下的文件中
+
+            fw.close();
+
+        } catch (IOException e) { e.printStackTrace(); }
     }
 }
