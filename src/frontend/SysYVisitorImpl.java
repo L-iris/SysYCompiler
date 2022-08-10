@@ -647,6 +647,18 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                 Value tmp = visitExpr(ctx.expr(i));
                 index_array[i] = tmp;
             }
+            if(var_ instanceof GlobalVariable) {
+                if(((GlobalVariable) var_).isConst()){
+                    ConstArray constArray = (ConstArray) ((GlobalVariable) var_).getOperand(0);
+                    Value v = constArray;
+                    for(var i:index_array){
+                        int value = ((ConstInt) i).value;
+                        v = ((ConstArray)v).get(value);
+                    }
+                    assert v instanceof ConstInt;
+                    return v;
+                }
+            }
             return GEPInst.create(visitCtx.basicBlock, null, var_, index_array);
         }
     }

@@ -3,6 +3,7 @@ package backend;
 import ir.BasicBlock;
 import ir.GlobalVariable;
 import ir.Module;
+import ir.constval.ConstArray;
 import ir.constval.ConstFloat;
 import ir.constval.ConstInt;
 import ir.instructions.Instruction;
@@ -60,6 +61,9 @@ public class IR2ASM {
                                 addLine("mov r0,#"+((ConstInt) retInst.getRetValue()).value);
                                 addLine("bx lr");
                             } else if(retInst.getRetValue() instanceof ConstFloat) {
+                                addLine("mov r0,#"+((ConstFloat) retInst.getRetValue()).value);
+                                addLine("bx lr");
+                            } else if(retInst.getRetValue() instanceof ConstArray) {
                                 addLine("mov r0,#"+((ConstFloat) retInst.getRetValue()).value);
                                 addLine("bx lr");
                             }
