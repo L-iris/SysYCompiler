@@ -17,7 +17,7 @@ public class Compiler {
     public static void main(String[] args) {
         CharStream input = null;
         try {
-            input = CharStreams.fromFileName(args[2]);
+            input = CharStreams.fromFileName(args[3]);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -36,7 +36,7 @@ public class Compiler {
         String asm = g.genAsm();
         System.out.println(asm);
 
-        String output = args[3];
+        String output = args[2];
         File file = new File(output);
         FileWriter fw;
 
