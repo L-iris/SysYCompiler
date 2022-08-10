@@ -3,6 +3,7 @@ package backend;
 import ir.BasicBlock;
 import ir.GlobalVariable;
 import ir.Module;
+import ir.Value;
 import ir.constval.ConstArray;
 import ir.constval.ConstFloat;
 import ir.constval.ConstInt;
@@ -72,10 +73,31 @@ public class IR2ASM {
                 }
             }
         }
-        if(module.globalVariables.getNumNode() !=0)
+        if(module.globalVariables.getNumNode() !=0) {
             addLine(".data\n");
+            addLine(".align 4");
+        }
         for(var gn:module.globalVariables) {
             GlobalVariable gv = gn.getVal();
+            Value init = gv.getOperand(0);
+            if(init instanceof ConstInt){
+                String name = gv.getName().substring(0, gv.getName().length() - 5);
+                addLine(".global "+ name);
+                addLine(name+":");
+                addLine("\t.word "+((ConstInt) init).value);
+            } else if(init instanceof ConstFloat){
+                String name = gv.getName().substring(0, gv.getName().length() - 5);
+                addLine(".global "+ name);
+                addLine(name+":");
+                addLine("\t.float "+((ConstFloat) init).value);
+            } else if(init instanceof ConstArray){
+                String name = gv.getName().substring(0, gv.getName().length() - 5);
+                addLine(".global "+ name);
+                addLine(name+":");
+                for(var v:((ConstArray) init).containedValue){
+
+                }
+            }
         }
 
         addLine(suffix);
