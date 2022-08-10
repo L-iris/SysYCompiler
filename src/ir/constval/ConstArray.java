@@ -36,9 +36,14 @@ public class ConstArray extends Value {
         return create(values[0].getType(), values);
     }
 
-    public static ConstArray create(Value initVal, Integer... dims){
+    public static ConstArray create(Value initVal,Integer dims_0,Integer... dims){
+        List<Integer> list=List.of(dims_0);
+        list.addAll(List.of(dims));
+        return ConstArray.create(initVal,list);
+    }// create(Value valye)时会与下方被注释函数冲突
+    /*public static ConstArray create(Value initVal, Integer... dims){
         return ConstArray.create(initVal, List.of(dims));
-    }
+    }*/
 
     public static ConstArray create(Value initVal, List<Integer> dims){
         assert initVal instanceof ConstArray || initVal instanceof ConstFloat || initVal instanceof ConstInt;

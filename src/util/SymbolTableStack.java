@@ -46,6 +46,9 @@ public class SymbolTableStack {
     }
 
     public boolean addValue(String name, Value value) {
+        if(value==null){
+            System.out.println("\naddValue\n\n\n");
+        }
         return currentSymbolTable().addValue(name, value);
     }
 

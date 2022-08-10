@@ -347,5 +347,5 @@ LineComment
     ;
 
 BlockComment
-    :'/*' .*? '/*' ->skip
+    :'/*' .*? '*/' ->skip
     ;

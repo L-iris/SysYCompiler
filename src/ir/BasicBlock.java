@@ -1,6 +1,7 @@
 package ir;
 
 import ir.instructions.Instruction;
+import ir.types.LabelType;
 import ir.types.Type;
 import util.ir.IList;
 import util.ir.IListNode;
@@ -53,6 +54,9 @@ public class BasicBlock extends Value implements IListNode<BasicBlock,Function>,
         super(Type.labelType(), name);
         this.instructionIList = new IList<>(this);
         this.parent = parent;
+    }
+    public BasicBlock(Function function,String name){
+        super(LabelType.labelType(),name);
     }
 
     public static BasicBlock create(Function parent, BasicBlock insertBefore, String name) {
