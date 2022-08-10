@@ -27,7 +27,7 @@ public class IR2ASM {
     public String genAsm() {
         addLine(prefix);
 
-        addLine(".test\n");
+        addLine(".text\n");
         for(var fn:module.functions) {
             var f = fn.getVal();
             if(f.isBuiltin)
