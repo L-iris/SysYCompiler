@@ -8,7 +8,9 @@ import util.frontend.SysYLexer;
 import util.frontend.SysYParser;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class Compiler {
     public static void main(String[] args) {
@@ -67,7 +69,7 @@ public class Compiler {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                System.out.println(fa[i].getName());
+                //System.out.println(fa[i].getName());
 
                 SysYLexer lexer = new SysYLexer(input);
                 CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -75,16 +77,27 @@ public class Compiler {
                 SysYParser parser = new SysYParser(tokens);
 
                 ParseTree tree = parser.program();
-                //System.out.println(tree.toStringTree(parser));
                 SysYVisitorImpl visitor = new SysYVisitorImpl(new Module());
                 visitor.visit(tree);
 
-                System.out.println(visitor.module.toString());
+                //System.out.println(visitor.module.toString());
             }
         }
     }
-    public static void write_to_target(String filename,String result){
-
+    public static void write_to_target(String path,String filename,String result){
+        File file=new File(path+"\\target\\"+"result_"+filename+".txt");
+        if(!file.exists()){
+            try {
+                file.createNewFile();
+                FileOutputStream fos=new FileOutputStream(file);
+                fos.write(result.getBytes(StandardCharsets.UTF_8));
+                System.out.println(filename+" write over");
+                fos.flush();
+                fos.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.println(filename+" is exists");
     }
-
 }
