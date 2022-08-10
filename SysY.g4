@@ -209,8 +209,8 @@ HEXADECIMAL_CONST
     ;
 
 FloatConst
-    :FractionalConst ExponentPart? FloatSuffix
-    |DigitSequence ExponentPart FloatSuffix
+    :FractionalConst ExponentPart? FloatSuffix?
+    |DigitSequence ExponentPart FloatSuffix?
     ;
 /* this fractional const may like 01.04 for example, so start with digitsequence */
 fragment FractionalConst
