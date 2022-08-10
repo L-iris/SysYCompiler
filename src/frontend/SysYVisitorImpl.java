@@ -7,6 +7,7 @@ import ir.constval.ConstFloat;
 import ir.constval.ConstInt;
 import ir.instructions.*;
 import ir.types.Type;
+import ir.types.VoidType;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.RuleNode;
 import util.SymbolTableStack;
@@ -48,6 +49,8 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         boolean isConst;
         boolean isGlobal;
         boolean isConstExpr;
+
+
     }
 
     public SymbolTableStack symbolTableStack;
@@ -173,7 +176,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         Type bType = this.visitCtx.bType;
         Value initVal = null;
         if(this.visitCtx.isGlobal) { //全局
-            if (ctx.LB().size() == 0) { //全局变量
+            if (ctx.LB().size() == 0) { //全局变量//全局常量
                 if(ctx.ASSIGN() != null)
                     initVal = visit(ctx.constInitVal());
                 else
@@ -204,10 +207,11 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                         initVal = ConstArray.create(ConstFloat.create(0), dims);
                 }
             }
-            retVal = GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", false, initVal);
+            retVal = GlobalVariable.create(module, bType, ctx.Identifier().getText() + ".addr", true, initVal);
             this.symbolTableStack.addValue(ctx.Identifier().getText(), retVal);
-        } else { //局部
-            if(ctx.LB().size() == 0) { //局部变量
+        }
+        else { //局部
+            if(ctx.LB().size() == 0) { //局部常量
                 if(ctx.ASSIGN() != null)
                     initVal = visit(ctx.constInitVal());
                 else
@@ -248,6 +252,17 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
      */
     @Override
     public Value visitConstInitVal(SysYParser.ConstInitValContext ctx) {
+        if(ctx.constExpr()!=null){
+            return visit(ctx.constExpr());
+        }else if(ctx.constInitVal()!=null){
+            int arr_dim=ctx.constInitVal().size();
+            if(arr_dim==0) return ConstArray.create(ConstInt.create(0));
+            Value tmp_arr[] = new Value[arr_dim];
+            for(int i = 0; i < arr_dim; i++){
+                tmp_arr[i] = visitConstInitVal(ctx.constInitVal(i));
+            }
+            return ConstArray.create(tmp_arr);
+        }
         return super.visitConstInitVal(ctx);
     }
 
@@ -356,6 +371,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             return visitExpr(ctx.expr());
         }else if (ctx.initVal() != null){
             int arr_dim = ctx.initVal().size();
+            //arr_dim=0 TODO
+            if(arr_dim==0){
+                return ConstArray.create(ConstInt.create(0));
+            }
             Value tmp_arr[] = new Value[arr_dim];
             for(int i = 0; i < arr_dim; i++){
                 tmp_arr[i] = visitInitVal(ctx.initVal(i));
@@ -440,7 +459,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         Arg funcFParam = null;
         visit(ctx.bType());
         Type bType = this.visitCtx.bType;
-        String name = ctx.Identifier().getText();
+        //String name = ctx.Identifier().getText();
         Type type = bType;
         if(ctx.LB().size() != 0) {
             List<SysYParser.ExprContext> exprs = ctx.expr();
@@ -466,7 +485,9 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             this.visitCtx.basicBlock = basicBlock;
             AllocInst.create(basicBlock, null, this.visitCtx.function.getFunctionType().getRetType());
             for(var arg : this.visitCtx.args){
-                StoreInst.create(this.visitCtx.basicBlock, arg, AllocInst.create(basicBlock, null, arg.getType()));
+                AllocInst allocInst = AllocInst.create(basicBlock, null, arg.getType());
+                StoreInst.create(this.visitCtx.basicBlock, arg, allocInst);
+                symbolTableStack.addValue(arg.getName(),allocInst);
             }
             this.visitCtx.args = null;
         }
@@ -519,7 +540,9 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         } else if(ctx.RETURN() != null) {
             visitReturn(ctx);
         } else {
-            visit(ctx.expr());
+            if(ctx.expr()!=null){
+                visit(ctx.expr());
+            }
         }
         return null;
     }
@@ -572,9 +595,14 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
 
     private Value visitReturn(SysYParser.StmtContext ctx) {
         Value v = null;
-        if(ctx.expr() != null)
+        if(ctx.expr() != null){
             v = visit(ctx.expr());
-        return RetInst.create(visitCtx.basicBlock, v);
+            return RetInst.create(visitCtx.basicBlock, v);
+        }else{
+            //todo
+            Value vt=new Value(this.visitCtx.retType);
+            return RetInst.create(visitCtx.basicBlock,vt);
+        }
     }
     /**
      * expr
@@ -606,6 +634,11 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
         String var = ctx.Identifier().getText();
         Value var_ = symbolTableStack.findValue(var);
         if(ctx.expr().size() == 0){
+            if(var_ instanceof GlobalVariable){
+                if(((GlobalVariable) var_).isConst()){
+                    return ((GlobalVariable)var_).getOperand(0);
+                }
+            }
             return LoadInst.create(this.visitCtx.basicBlock, null, var_);
         }else{
             int arr_dim = ctx.expr().size();
@@ -721,7 +754,10 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
             }
         }else if(ctx.Identifier() != null){
                String type_name = ctx.Identifier().getText();
-               Value type_ = symbolTableStack.findValueCurrentScope(type_name);
+               //Value type_ = symbolTableStack.findValueCurrentScope(type_name);
+               //?
+               Value type_=symbolTableStack.findValue(type_name);
+
                assert type_ instanceof Function;
                if(ctx.funcRParams() != null){
                    Value[] params = new Value[ctx.funcRParams().expr().size()];
@@ -731,7 +767,7 @@ public class SysYVisitorImpl extends SysYBaseVisitor<Value> {
                    }
                    CallInst.create(visitCtx.basicBlock, null, (Function) type_, params);
                }
-               CallInst.create(visitCtx.basicBlock, null, (Function) type_);
+               return CallInst.create(visitCtx.basicBlock, null, (Function) type_);
         }
         return super.visitUnaryExpr(ctx);
     }

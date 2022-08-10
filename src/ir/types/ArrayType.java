@@ -8,6 +8,7 @@ public class ArrayType extends Type{
     protected ArrayType(Type containedType, int numElements) {
         super(TypeID.ArrayTyID);
         this.numElements = numElements;
+        this.containedType = containedType;
     }
 
     public int getNumElements() {

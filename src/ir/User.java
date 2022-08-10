@@ -64,6 +64,10 @@ public class User extends Value{
         return numUserOperands;
     }
 
+    public List<Value> getUserOperands(){
+        return userOperands;
+    }
+
     public Value getOperand(int i) {
         return userOperands.get(i);
     }
