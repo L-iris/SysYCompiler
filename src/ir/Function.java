@@ -29,7 +29,7 @@ public class Function extends Constant implements IListNode<Function,Module>, It
 
     private List<Arg> argList;
 
-    boolean isBuiltin;
+    public boolean isBuiltin;
     public IList<BasicBlock, Function> basicBlockIlist;
 
     public Function(FunctionType functionType, String name, List<Arg> argList, boolean isBuiltin, Module parent) {

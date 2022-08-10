@@ -1,3 +1,4 @@
+import backend.IR2ASM;
 import frontend.SysYVisitorImpl;
 import ir.Module;
 import org.antlr.v4.runtime.CharStream;
@@ -27,5 +28,8 @@ public class Compiler {
         SysYVisitorImpl visitor = new SysYVisitorImpl(new Module());
         visitor.visit(tree);
         System.out.println(visitor.module.toString());
+
+        var g = new IR2ASM(visitor.module);
+        System.out.println(g.genAsm());
     }
 }
