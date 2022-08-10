@@ -44,7 +44,7 @@ public class Compiler {
 
             fw=new FileWriter(file);
 
-            fw.write(asm);//将字符串写入到指定的路径下的文件中
+            fw.write(asm);
 
             fw.close();
 
