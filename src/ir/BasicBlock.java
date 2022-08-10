@@ -55,6 +55,9 @@ public class BasicBlock extends Value implements IListNode<BasicBlock,Function>,
         this.instructionIList = new IList<>(this);
         this.parent = parent;
     }
+    public BasicBlock(Function function,String name){
+        super(LabelType.labelType(),name);
+    }
 
     public static BasicBlock create(Function parent, BasicBlock insertBefore, String name) {
         BasicBlock basicBlock = new BasicBlock(name, parent);
